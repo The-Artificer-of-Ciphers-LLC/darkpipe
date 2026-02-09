@@ -10,28 +10,28 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 ## Current Position
 
 Phase: 2 of 9 (Cloud Relay)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: In Progress
-Last activity: 2026-02-09 -- Completed 02-01-PLAN.md (cloud relay core)
+Last activity: 2026-02-09 -- Completed 02-02-PLAN.md (TLS/SSL certificates)
 
-Progress: [████░░░░░░] 40%
+Progress: [████░░░░░░] 45%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
-- Average duration: 4.7 minutes
-- Total execution time: 0.31 hours
+- Total plans completed: 5
+- Average duration: 5.2 minutes
+- Total execution time: 0.41 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01 (Transport Layer) | 3 | 889s | 296s |
-| 02 (Cloud Relay) | 1 | 234s | 234s |
+| 02 (Cloud Relay) | 2 | 600s | 300s |
 
 **Recent Trend:**
-- Last 5 plans: 422s, 197s, 270s, 234s
+- Last 5 plans: 197s, 270s, 234s, 366s
 - Trend: Consistent execution speed (3-7 minutes per plan)
 
 *Updated after each plan completion*
@@ -60,9 +60,15 @@ Recent decisions affecting current work:
 - [01-03]: 5-minute health check threshold (PersistentKeepalive=25 refreshes ~2min)
 - [01-03]: Unified transport health checker for consistent WireGuard/mTLS interface
 - [01-03]: VPS provider guide prioritizes port 25 SMTP compatibility over price
-- [Phase 02-01]: Use emersion/go-smtp for both server and client sides
-- [Phase 02-01]: LMDB format for Postfix maps (BerkleyDB deprecated in Alpine)
-- [Phase 02-01]: Transport abstraction via Forwarder interface for WireGuard/mTLS flexibility
+- [02-01]: Use emersion/go-smtp for both server and client sides
+- [02-01]: LMDB format for Postfix maps (BerkleyDB deprecated in Alpine)
+- [02-01]: Transport abstraction via Forwarder interface for WireGuard/mTLS flexibility
+- [02-02]: Webhook notifications rate-limited per domain (1-hour dedup window) to prevent spam
+- [02-02]: Certificate watcher uses mtime-based change detection every 5 minutes
+- [02-02]: Postfix TLS disabled on first boot until certificates are available
+- [02-02]: Strict mode uses postconf for dynamic configuration without editing main.cf
+- [02-02]: HTTP-01 challenge for initial cert obtain; DNS-01 documented as alternative
+- [02-02]: TLS 1.2+ only with server cipher preference for modern security
 
 ### Pending Todos
 
@@ -77,6 +83,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Completed 02-01-PLAN.md (cloud relay core)
-Resume file: .planning/phases/02-cloud-relay/02-01-SUMMARY.md
-Next plan: 02-02-PLAN.md (TLS/SSL certificates)
+Stopped at: Completed 02-02-PLAN.md (TLS/SSL certificates)
+Resume file: .planning/phases/02-cloud-relay/02-02-SUMMARY.md
+Next plan: 02-03-PLAN.md (SMTP authentication and rate limiting)
