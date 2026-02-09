@@ -1,0 +1,56 @@
+# Postfix relay-only (null client) configuration for DarkPipe cloud relay
+#
+# This Postfix instance accepts inbound mail on port 25 from the internet
+# and forwards ALL mail to the Go relay daemon on localhost:10025, which
+# then forwards via WireGuard/mTLS to the home device.
+#
+# Key characteristics:
+# - mydestination = (empty) -> no local delivery
+# - transport_maps -> all mail to localhost:10025
+# - mynetworks includes WireGuard subnet for home device outbound submission
+
+# Hostname and domain (templated by entrypoint.sh)
+myhostname = ${RELAY_HOSTNAME}
+mydomain = ${RELAY_DOMAIN}
+myorigin = $mydomain
+
+# Null client mode: NO local delivery
+mydestination =
+local_recipient_maps =
+local_transport = error:local mail delivery is disabled
+
+# Network configuration
+inet_interfaces = all
+inet_protocols = ipv4
+mynetworks = 127.0.0.0/8, [::1]/128, 10.8.0.0/24
+
+# Transport: all mail goes to Go relay daemon on localhost:10025
+transport_maps = lmdb:/etc/postfix/transport
+
+# Message limits
+message_size_limit = 52428800
+
+# TLS configuration (opportunistic, not enforced until Plan 02-02)
+smtpd_tls_security_level = may
+smtp_tls_security_level = may
+smtp_tls_loglevel = 1
+smtpd_tls_loglevel = 1
+
+# TLS certificates (placeholder for Plan 02-02)
+smtpd_tls_cert_file = /etc/letsencrypt/live/${RELAY_HOSTNAME}/fullchain.pem
+smtpd_tls_key_file = /etc/letsencrypt/live/${RELAY_HOSTNAME}/privkey.pem
+
+# TLS protocol restrictions (TLS 1.2+ only)
+smtpd_tls_mandatory_protocols = !SSLv2, !SSLv3, !TLSv1, !TLSv1.1
+smtp_tls_mandatory_protocols = !SSLv2, !SSLv3, !TLSv1, !TLSv1.1
+
+# TLS session cache (LMDB format, not BerkleyDB)
+smtp_tls_session_cache_database = lmdb:${data_directory}/smtp_scache
+smtpd_tls_session_cache_database = lmdb:${data_directory}/smtpd_scache
+
+# Relay restrictions
+smtpd_relay_restrictions = permit_mynetworks, reject_unauth_destination
+
+# Logging and queue
+maillog_file = /dev/stdout
+queue_directory = /var/spool/postfix

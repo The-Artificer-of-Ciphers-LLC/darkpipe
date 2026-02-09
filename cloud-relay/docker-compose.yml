@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  relay:
+    build:
+      context: ..
+      dockerfile: cloud-relay/Dockerfile
+    container_name: darkpipe-relay
+    ports:
+      - "25:25"
+    environment:
+      # Postfix configuration
+      RELAY_HOSTNAME: relay.example.com
+      RELAY_DOMAIN: example.com
+
+      # Go relay daemon configuration
+      RELAY_LISTEN_ADDR: 127.0.0.1:10025
+      RELAY_TRANSPORT: wireguard
+      RELAY_HOME_ADDR: 10.8.0.2:25
+
+      # mTLS transport (if RELAY_TRANSPORT=mtls)
+      # RELAY_CA_CERT: /certs/ca.crt
+      # RELAY_CLIENT_CERT: /certs/client.crt
+      # RELAY_CLIENT_KEY: /certs/client.key
+
+      RELAY_MAX_MESSAGE_BYTES: 52428800
+
+    volumes:
+      # Persistent Postfix queue
+      - postfix-queue:/var/spool/postfix
+
+      # TLS certificates (placeholder for Plan 02-02)
+      - certbot-etc:/etc/letsencrypt:ro
+
+      # mTLS certificates (if using mTLS transport)
+      # - ./certs:/certs:ro
+
+    # WireGuard support requires NET_ADMIN capability and /dev/net/tun
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun
+
+    restart: unless-stopped
+
+    networks:
+      - darkpipe
+
+networks:
+  darkpipe:
+    driver: bridge
+
+volumes:
+  postfix-queue:
+  certbot-etc:

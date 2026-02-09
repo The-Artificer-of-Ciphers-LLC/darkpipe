@@ -1,0 +1,10 @@
+# Postfix transport map for DarkPipe cloud relay
+#
+# ALL inbound mail is forwarded to the Go relay daemon on localhost:10025.
+# The Go daemon then forwards via WireGuard/mTLS transport to the home device.
+#
+# This file is hashed with `postmap lmdb:/etc/postfix/transport` in the
+# entrypoint script to create transport.lmdb.
+
+# Wildcard: all mail goes to relay daemon
+* smtp:[127.0.0.1]:10025
