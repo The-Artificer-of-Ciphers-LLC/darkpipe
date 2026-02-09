@@ -10,29 +10,29 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 ## Current Position
 
 Phase: 2 of 9 (Cloud Relay)
-Plan: 2 of 3 in current phase
-Status: In Progress
-Last activity: 2026-02-09 -- Completed 02-02-PLAN.md (TLS/SSL certificates)
+Plan: 3 of 3 in current phase
+Status: Complete
+Last activity: 2026-02-09 -- Completed 02-03-PLAN.md (ephemeral verification and test suite)
 
-Progress: [████░░░░░░] 45%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5
-- Average duration: 5.2 minutes
-- Total execution time: 0.41 hours
+- Total plans completed: 6
+- Average duration: 6.3 minutes
+- Total execution time: 0.65 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01 (Transport Layer) | 3 | 889s | 296s |
-| 02 (Cloud Relay) | 2 | 600s | 300s |
+| 02 (Cloud Relay) | 3 | 1142s | 381s |
 
 **Recent Trend:**
-- Last 5 plans: 197s, 270s, 234s, 366s
-- Trend: Consistent execution speed (3-7 minutes per plan)
+- Last 5 plans: 270s, 234s, 366s, 542s
+- Trend: Increasing complexity (4-9 minutes per plan, test suite plans take longer)
 
 *Updated after each plan completion*
 
@@ -69,6 +69,11 @@ Recent decisions affecting current work:
 - [02-02]: Strict mode uses postconf for dynamic configuration without editing main.cf
 - [02-02]: HTTP-01 challenge for initial cert obtain; DNS-01 documented as alternative
 - [02-02]: TLS 1.2+ only with server cipher preference for modern security
+- [02-03]: Ephemeral verification scans 5 Postfix queue dirs, ignores control files
+- [02-03]: MockForwarder exported in forward/mock.go for cross-package testing
+- [02-03]: Docker image optimized: Alpine 3.21, stripped binary, .dockerignore, target ~35MB
+- [02-03]: Docker compose 256MB memory limit enforced via deploy.resources.limits
+- [02-03]: All tests use stdlib testing only (no external frameworks) for zero dependencies
 
 ### Pending Todos
 
@@ -83,6 +88,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Completed 02-02-PLAN.md (TLS/SSL certificates)
-Resume file: .planning/phases/02-cloud-relay/02-02-SUMMARY.md
-Next plan: 02-03-PLAN.md (SMTP authentication and rate limiting)
+Stopped at: Completed 02-03-PLAN.md (ephemeral verification and test suite)
+Resume file: .planning/phases/02-cloud-relay/02-03-SUMMARY.md
+Next plan: Phase 2 complete, ready for Phase 3 (Home Mail Server)
