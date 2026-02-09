@@ -178,24 +178,62 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| RELAY-01 through RELAY-08 | TBD | Pending |
-| TRNS-01 through TRNS-04 | TBD | Pending |
-| CERT-01 through CERT-04 | TBD | Pending |
-| AUTH-01 through AUTH-07 | TBD | Pending |
-| MAIL-01 through MAIL-06 | TBD | Pending |
-| WEB-01 through WEB-02 | TBD | Pending |
-| CAL-01 through CAL-02 | TBD | Pending |
-| BUILD-01 through BUILD-03 | TBD | Pending |
-| QUEUE-01 through QUEUE-03 | TBD | Pending |
-| PROF-01 through PROF-05 | TBD | Pending |
-| MON-01 through MON-03 | TBD | Pending |
-| UX-01 through UX-03 | TBD | Pending |
+| TRNS-01 | Phase 1: Transport Layer | Pending |
+| TRNS-02 | Phase 1: Transport Layer | Pending |
+| TRNS-03 | Phase 1: Transport Layer | Pending |
+| TRNS-04 | Phase 1: Transport Layer | Pending |
+| CERT-02 | Phase 1: Transport Layer | Pending |
+| RELAY-01 | Phase 2: Cloud Relay | Pending |
+| RELAY-02 | Phase 2: Cloud Relay | Pending |
+| RELAY-03 | Phase 2: Cloud Relay | Pending |
+| RELAY-04 | Phase 2: Cloud Relay | Pending |
+| RELAY-05 | Phase 2: Cloud Relay | Pending |
+| RELAY-06 | Phase 2: Cloud Relay | Pending |
+| CERT-01 | Phase 2: Cloud Relay | Pending |
+| UX-02 | Phase 2: Cloud Relay | Pending |
+| RELAY-07 | Phase 3: Home Mail Server | Pending |
+| RELAY-08 | Phase 3: Home Mail Server | Pending |
+| MAIL-01 | Phase 3: Home Mail Server | Pending |
+| MAIL-02 | Phase 3: Home Mail Server | Pending |
+| MAIL-03 | Phase 3: Home Mail Server | Pending |
+| MAIL-04 | Phase 3: Home Mail Server | Pending |
+| MAIL-05 | Phase 3: Home Mail Server | Pending |
+| MAIL-06 | Phase 3: Home Mail Server | Pending |
+| AUTH-01 | Phase 4: DNS & Email Authentication | Pending |
+| AUTH-02 | Phase 4: DNS & Email Authentication | Pending |
+| AUTH-03 | Phase 4: DNS & Email Authentication | Pending |
+| AUTH-04 | Phase 4: DNS & Email Authentication | Pending |
+| AUTH-05 | Phase 4: DNS & Email Authentication | Pending |
+| AUTH-06 | Phase 4: DNS & Email Authentication | Pending |
+| AUTH-07 | Phase 4: DNS & Email Authentication | Pending |
+| QUEUE-01 | Phase 5: Queue & Offline Handling | Pending |
+| QUEUE-02 | Phase 5: Queue & Offline Handling | Pending |
+| QUEUE-03 | Phase 5: Queue & Offline Handling | Pending |
+| WEB-01 | Phase 6: Webmail & Groupware | Pending |
+| WEB-02 | Phase 6: Webmail & Groupware | Pending |
+| CAL-01 | Phase 6: Webmail & Groupware | Pending |
+| CAL-02 | Phase 6: Webmail & Groupware | Pending |
+| BUILD-01 | Phase 7: Build System & Deployment | Pending |
+| BUILD-02 | Phase 7: Build System & Deployment | Pending |
+| BUILD-03 | Phase 7: Build System & Deployment | Pending |
+| UX-01 | Phase 7: Build System & Deployment | Pending |
+| UX-03 | Phase 7: Build System & Deployment | Pending |
+| PROF-01 | Phase 8: Device Profiles & Client Setup | Pending |
+| PROF-02 | Phase 8: Device Profiles & Client Setup | Pending |
+| PROF-03 | Phase 8: Device Profiles & Client Setup | Pending |
+| PROF-04 | Phase 8: Device Profiles & Client Setup | Pending |
+| PROF-05 | Phase 8: Device Profiles & Client Setup | Pending |
+| MON-01 | Phase 9: Monitoring & Observability | Pending |
+| MON-02 | Phase 9: Monitoring & Observability | Pending |
+| MON-03 | Phase 9: Monitoring & Observability | Pending |
+| CERT-03 | Phase 9: Monitoring & Observability | Pending |
+| CERT-04 | Phase 9: Monitoring & Observability | Pending |
 
 **Coverage:**
-- v1 requirements: 45 total
-- Mapped to phases: 0 (pending roadmap creation)
-- Unmapped: 45 (pending roadmap creation)
+- v1 requirements: 50 total (12 categories)
+- Mapped to phases: 50/50
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-08*
-*Last updated: 2026-02-08 after initial definition*
+*Last updated: 2026-02-08 after roadmap creation — traceability complete*
