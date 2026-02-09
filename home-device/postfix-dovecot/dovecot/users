@@ -1,0 +1,25 @@
+# Dovecot User Credentials File
+# Format: user@domain:{scheme}password:uid:gid::home
+#
+# This file contains user credentials for Dovecot authentication.
+# Each line defines a user account with password and home directory.
+#
+# Password schemes:
+#   {PLAIN}password         - Plaintext (for testing only)
+#   {SHA512-CRYPT}$6$...    - SHA512 crypt hash (recommended)
+#   {BLF-CRYPT}$2a$...      - Bcrypt hash (very secure)
+#
+# Generate hash: doveadm pw -s SHA512-CRYPT
+#
+# Multi-domain example:
+#   alice@example.com:{PLAIN}changeme:5000:5000::/var/mail/vhosts/example.com/alice
+#   bob@example.org:{PLAIN}changeme:5000:5000::/var/mail/vhosts/example.org/bob
+#
+# IMPORTANT: Change passwords to hashed format in production!
+# Users from different domains are automatically isolated (maildir paths are separate).
+
+# Users on example.com domain
+alice@example.com:{PLAIN}changeme:5000:5000::/var/mail/vhosts/example.com/alice
+
+# Users on example.org domain
+bob@example.org:{PLAIN}changeme:5000:5000::/var/mail/vhosts/example.org/bob

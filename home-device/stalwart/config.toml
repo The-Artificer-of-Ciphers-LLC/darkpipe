@@ -77,10 +77,41 @@ type = "internal"
 store = "data"
 
 # Users are stored in internal SQLite database
-# Create users via REST API:
+# Domains are managed via REST API or Web UI
+#
+# DOMAIN MANAGEMENT:
+# ------------------
+# Add domain via REST API:
+#   curl -X POST http://localhost:8080/api/v1/domain \
+#     -H "Authorization: Basic admin:changeme" \
+#     -H "Content-Type: application/json" \
+#     -d '{"name": "example.com"}'
+#
+# Add domain via Web UI:
+#   Navigate to http://localhost:8080 -> Domains -> Add Domain
+#
+# USER MANAGEMENT:
+# ----------------
+# Create user via REST API:
 #   curl -X POST http://localhost:8080/api/v1/account \
-#     -H "Authorization: Basic ..." \
-#     -d '{"email": "user@example.com", "password": "...", "quota": 10737418240}'
+#     -H "Authorization: Basic admin:changeme" \
+#     -H "Content-Type: application/json" \
+#     -d '{"email": "user@example.com", "password": "userpass", "quota": 10737418240}'
+#
+# Create user via Web UI:
+#   Navigate to http://localhost:8080 -> Accounts -> Add Account
+#
+# ALIAS MANAGEMENT:
+# -----------------
+# Create alias via REST API:
+#   curl -X POST http://localhost:8080/api/v1/account \
+#     -H "Authorization: Basic admin:changeme" \
+#     -H "Content-Type: application/json" \
+#     -d '{"type": "alias", "email": "admin@example.com", "memberOf": ["alice@example.com"]}'
+#
+# Note: Stalwart's internal directory stores all data in SQLite.
+# No external database required. User accounts include the full email address (user@domain).
+# Multiple domains are supported automatically -- each user's email determines their domain.
 
 # ============================================================================
 # Session Configuration
@@ -128,6 +159,7 @@ reject-non-fqdn = false  # Allow EHLO from internal network
 
 [session.auth]
 # Require authentication for submission (port 587)
+# Users authenticate with full email address (user@domain) and password
 require = true
 directory = "internal"
 

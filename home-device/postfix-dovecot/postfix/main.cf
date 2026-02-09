@@ -26,8 +26,9 @@ append_dot_mydomain = no
 
 # Domains for which this server is the final destination
 # Mail is delivered to virtual mailboxes (NOT system users)
+# Multiple domains supported: list all domains separated by commas
 # Substituted by entrypoint.sh from MAIL_DOMAIN environment variable
-virtual_mailbox_domains = example.com
+virtual_mailbox_domains = example.com, example.org
 
 # Base directory for all virtual mailboxes
 virtual_mailbox_base = /var/mail/vhosts

@@ -1,0 +1,20 @@
+# Postfix Virtual Mailbox Mapping
+# Format: email@domain  domain/user/
+#
+# This file maps email addresses to maildir paths.
+# Each entry defines a virtual mailbox for a user.
+#
+# Multi-domain example:
+#   alice@example.com    example.com/alice/
+#   bob@example.org      example.org/bob/
+#
+# After editing this file, run: postmap lmdb:/etc/postfix/vmailbox
+#
+# IMPORTANT: Domains listed here must also be in virtual_mailbox_domains
+# in main.cf. Do NOT add these domains to virtual_alias_domains.
+
+# Users on example.com domain
+alice@example.com    example.com/alice/
+
+# Users on example.org domain
+bob@example.org      example.org/bob/

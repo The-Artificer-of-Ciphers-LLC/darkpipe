@@ -28,8 +28,10 @@ services:
       - "25:25"    # SMTP inbound (from cloud relay)
       - "587:587"  # SMTP submission (from mail clients)
       - "993:993"  # IMAPS (from mail clients)
+      - "8080:8080"  # Management API and Web UI
     volumes:
       - ./stalwart/config.toml:/opt/stalwart-mail/etc/config.toml:ro
+      - ./stalwart/setup-users.sh:/opt/stalwart-mail/setup-users.sh:ro
       - mail-data:/opt/stalwart-mail/data
     environment:
       - MAIL_DOMAIN=${MAIL_DOMAIN:-example.com}
@@ -60,6 +62,7 @@ services:
       - "993:993"  # IMAPS (from mail clients)
     volumes:
       - ./maddy/maddy.conf:/data/maddy.conf:ro
+      - ./maddy/setup-users.sh:/data/setup-users.sh:ro
       - mail-data:/data
     environment:
       - MAIL_DOMAIN=${MAIL_DOMAIN:-example.com}
@@ -89,6 +92,9 @@ services:
       - "587:587"  # SMTP submission (from mail clients)
       - "993:993"  # IMAPS (from mail clients)
     volumes:
+      - ./postfix-dovecot/postfix/vmailbox:/etc/postfix/vmailbox:ro
+      - ./postfix-dovecot/postfix/virtual:/etc/postfix/virtual:ro
+      - ./postfix-dovecot/dovecot/users:/etc/dovecot/users:ro
       - mail-data:/var/mail/vhosts
       - mail-config:/etc/postfix-dovecot
     environment:
@@ -96,6 +102,7 @@ services:
       - MAIL_HOSTNAME=${MAIL_HOSTNAME:-mail.example.com}
       - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@example.com}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-changeme}
+      - VIRTUAL_DOMAINS=${VIRTUAL_DOMAINS:-example.com, example.org}
     networks:
       - darkpipe
     deploy:
