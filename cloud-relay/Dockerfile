@@ -2,6 +2,8 @@
 #
 # Stage 1: Build the Go relay daemon
 # Stage 2: Runtime container with Postfix + relay daemon + WireGuard tools
+#
+# Target size: <50MB (Alpine base ~5MB + Postfix ~15MB + wireguard-tools ~5MB + Go binary ~3-5MB + gettext ~2MB = ~30-35MB)
 
 FROM golang:1.24-alpine AS builder
 
@@ -14,15 +16,20 @@ RUN go mod download
 # Copy source code
 COPY . .
 
-# Build relay daemon (static binary)
+# Build relay daemon (static binary with stripped symbols)
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o relay-daemon ./cloud-relay/cmd/relay
+
+# Optional: UPX compression if binary exceeds 5MB (uncomment to enable)
+# RUN apk add --no-cache upx && upx --best relay-daemon
 
 # Stage 2: Runtime
 FROM alpine:3.21
 
 # Install Postfix, WireGuard tools, CA certificates, and gettext (for envsubst)
+# Use --no-cache to avoid storing the apk cache layer (~20MB savings)
+# Pin Postfix version for reproducibility
 RUN apk add --no-cache \
-    postfix \
+    postfix~=3.9 \
     ca-certificates \
     wireguard-tools \
     gettext \
@@ -40,6 +47,11 @@ COPY cloud-relay/postfix-config/transport /etc/postfix/transport
 # Copy entrypoint script
 COPY cloud-relay/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
+
+# Labels for container metadata
+LABEL org.opencontainers.image.source=https://github.com/trek-e/darkpipe
+LABEL org.opencontainers.image.description="DarkPipe Cloud Relay - Ephemeral SMTP relay with WireGuard/mTLS transport"
+LABEL org.opencontainers.image.licenses=AGPL-3.0
 
 # Expose SMTP port
 EXPOSE 25

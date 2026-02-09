@@ -1,0 +1,46 @@
+# Git repository
+.git/
+.gitignore
+.gitattributes
+
+# Planning and documentation
+.planning/
+docs/
+*.md
+!README.md
+
+# Test files
+*_test.go
+testdata/
+
+# Development files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Build artifacts
+*.o
+*.a
+*.so
+bin/
+dist/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Environment files
+.env
+.env.*
+*.local
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+
+# Dependencies (will be downloaded in builder stage)
+vendor/

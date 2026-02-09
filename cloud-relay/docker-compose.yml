@@ -32,6 +32,17 @@ services:
       # Certbot (for Let's Encrypt certificate automation)
       # CERTBOT_EMAIL: admin@example.com
 
+      # Ephemeral storage verification (default: 60 seconds)
+      RELAY_EPHEMERAL_CHECK_INTERVAL: 60
+
+    # Resource limits per UX-02: Must run with less than 256MB RAM on $5/month VPS
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+
     volumes:
       # Persistent Postfix queue
       - postfix-queue:/var/spool/postfix
