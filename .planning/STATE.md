@@ -10,28 +10,28 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 ## Current Position
 
 Phase: 1 of 9 (Transport Layer)
-Plan: 0 of 3 in current phase
-Status: Ready to plan
-Last activity: 2026-02-08 -- Roadmap created with 9 phases covering 50 requirements
+Plan: 1 of 3 in current phase
+Status: Executing
+Last activity: 2026-02-09 -- Completed 01-01-PLAN.md (WireGuard Foundation)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█░░░░░░░░░] 11%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
-- Average duration: -
-- Total execution time: 0 hours
+- Total plans completed: 1
+- Average duration: 4.5 minutes
+- Total execution time: 0.08 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 01 (Transport Layer) | 1 | 270s | 270s |
 
 **Recent Trend:**
-- Last 5 plans: -
-- Trend: -
+- Last 5 plans: 270s
+- Trend: Starting (baseline)
 
 *Updated after each plan completion*
 
@@ -46,6 +46,11 @@ Recent decisions affecting current work:
 - [Roadmap]: Transport layer first (WireGuard + mTLS) -- both relay and home device depend on it
 - [Roadmap]: VPS provider validation (port 25) folded into Phase 1 as prerequisite activity
 - [Roadmap]: Certificate management split -- CERT-01 (public) with cloud relay, CERT-02 (internal) with transport, CERT-03/04 (lifecycle) with monitoring
+- [01-01]: Use stdlib text/template for config generation (zero external dependencies)
+- [01-01]: Wrap wg CLI rather than implement crypto (leverage official tools)
+- [01-01]: Default PersistentKeepalive=25 for NAT traversal without port forwarding
+- [01-01]: 0600 permissions for all config files to protect private keys
+- [01-01]: Systemd auto-restart with 30s delay to prevent rapid failure loops
 
 ### Pending Todos
 
@@ -59,6 +64,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-08
-Stopped at: Roadmap creation complete, ready for Phase 1 planning
-Resume file: None
+Last session: 2026-02-09
+Stopped at: Completed Phase 01 Plan 01 (WireGuard Foundation)
+Resume file: .planning/phases/01-transport-layer/01-01-SUMMARY.md
