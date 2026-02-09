@@ -13,7 +13,7 @@ DarkPipe delivers email sovereignty by splitting the mail stack across a minimal
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Transport Layer** - Encrypted tunnel between cloud relay and home device with NAT traversal (completed 2026-02-09)
-- [ ] **Phase 2: Cloud Relay** - Minimal internet-facing SMTP gateway that receives and forwards mail
+- [x] **Phase 2: Cloud Relay** - Minimal internet-facing SMTP gateway that receives and forwards mail (completed 2026-02-09)
 - [ ] **Phase 3: Home Mail Server** - Full-featured mail server with IMAP access on user-owned hardware
 - [ ] **Phase 4: DNS & Email Authentication** - Automated SPF/DKIM/DMARC setup and DNS provider integration
 - [ ] **Phase 5: Queue & Offline Handling** - Encrypted message queuing when home device is unreachable
@@ -53,9 +53,9 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 02-01-PLAN.md -- Postfix relay-only container with Go SMTP relay daemon bridging to WireGuard/mTLS transport
-- [ ] 02-02-PLAN.md -- TLS enforcement, strict mode, notification system, and Let's Encrypt certbot automation
-- [ ] 02-03-PLAN.md -- Ephemeral storage verification, container optimization, and comprehensive test suite
+- [x] 02-01-PLAN.md -- Postfix relay-only container with Go SMTP relay daemon bridging to WireGuard/mTLS transport
+- [x] 02-02-PLAN.md -- TLS enforcement, strict mode, notification system, and Let's Encrypt certbot automation
+- [x] 02-03-PLAN.md -- Ephemeral storage verification, container optimization, and comprehensive test suite
 
 ### Phase 3: Home Mail Server
 **Goal**: Users access their email through standard IMAP clients and send mail via SMTP submission, with all messages stored on their own hardware with spam filtering, multi-user support, and multi-domain capability
@@ -180,7 +180,7 @@ Note: Phases 5 and 6 can execute in parallel after their dependencies are met. P
 | Phase | Plans Complete | Status | Completed |
 |-------|---------------|--------|-----------|
 | 1. Transport Layer | 3/3 | Complete | 2026-02-09 |
-| 2. Cloud Relay | 0/3 | Planned | - |
+| 2. Cloud Relay | 3/3 | Complete | 2026-02-09 |
 | 3. Home Mail Server | 0/3 | Not started | - |
 | 4. DNS & Email Authentication | 0/3 | Not started | - |
 | 5. Queue & Offline Handling | 0/2 | Not started | - |

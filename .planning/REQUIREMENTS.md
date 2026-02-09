@@ -9,12 +9,12 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Core Email Transport
 
-- [ ] **RELAY-01**: Cloud relay receives inbound SMTP with TLS (Let's Encrypt)
-- [ ] **RELAY-02**: Cloud relay forwards messages to home device without persistent storage (in-flight only)
-- [ ] **RELAY-03**: Cloud relay sends outbound SMTP via direct MTA delivery
-- [ ] **RELAY-04**: TLS enforced on all SMTP connections (SSL/STARTTLS)
-- [ ] **RELAY-05**: Optional strict mode to refuse mail from plaintext-only peers
-- [ ] **RELAY-06**: User notified when a remote mail server does not support a secure endpoint
+- [x] **RELAY-01**: Cloud relay receives inbound SMTP with TLS (Let's Encrypt)
+- [x] **RELAY-02**: Cloud relay forwards messages to home device without persistent storage (in-flight only)
+- [x] **RELAY-03**: Cloud relay sends outbound SMTP via direct MTA delivery
+- [x] **RELAY-04**: TLS enforced on all SMTP connections (SSL/STARTTLS)
+- [x] **RELAY-05**: Optional strict mode to refuse mail from plaintext-only peers
+- [x] **RELAY-06**: User notified when a remote mail server does not support a secure endpoint
 - [ ] **RELAY-07**: IMAP server on home device for mail client access
 - [ ] **RELAY-08**: SMTP submission (port 587) on home device for sending from clients
 
@@ -27,7 +27,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Certificate Management
 
-- [ ] **CERT-01**: Let's Encrypt certificates via Certbot for public-facing TLS
+- [x] **CERT-01**: Let's Encrypt certificates via Certbot for public-facing TLS
 - [x] **CERT-02**: Internal CA (step-ca) for relay↔home transport certificates
 - [ ] **CERT-03**: Configurable certificate rotation (30/60/90 days)
 - [ ] **CERT-04**: Certificate expiry monitoring with alerts
@@ -90,7 +90,7 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Deployment & UX
 
 - [ ] **UX-01**: Tiered experience — simple defaults for non-technical users, full control for power users
-- [ ] **UX-02**: Cloud relay runs in smallest possible container footprint
+- [x] **UX-02**: Cloud relay runs in smallest possible container footprint
 - [ ] **UX-03**: Runs on Raspberry Pi 4+ (arm64), x64/arm64 Docker/Podman, TrueNAS Scale, Unraid
 
 ## v2 Requirements
@@ -183,14 +183,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TRNS-03 | Phase 1: Transport Layer | ✓ Complete |
 | TRNS-04 | Phase 1: Transport Layer | ✓ Complete |
 | CERT-02 | Phase 1: Transport Layer | ✓ Complete |
-| RELAY-01 | Phase 2: Cloud Relay | Pending |
-| RELAY-02 | Phase 2: Cloud Relay | Pending |
-| RELAY-03 | Phase 2: Cloud Relay | Pending |
-| RELAY-04 | Phase 2: Cloud Relay | Pending |
-| RELAY-05 | Phase 2: Cloud Relay | Pending |
-| RELAY-06 | Phase 2: Cloud Relay | Pending |
-| CERT-01 | Phase 2: Cloud Relay | Pending |
-| UX-02 | Phase 2: Cloud Relay | Pending |
+| RELAY-01 | Phase 2: Cloud Relay | ✓ Complete |
+| RELAY-02 | Phase 2: Cloud Relay | ✓ Complete |
+| RELAY-03 | Phase 2: Cloud Relay | ✓ Complete |
+| RELAY-04 | Phase 2: Cloud Relay | ✓ Complete |
+| RELAY-05 | Phase 2: Cloud Relay | ✓ Complete |
+| RELAY-06 | Phase 2: Cloud Relay | ✓ Complete |
+| CERT-01 | Phase 2: Cloud Relay | ✓ Complete |
+| UX-02 | Phase 2: Cloud Relay | ✓ Complete |
 | RELAY-07 | Phase 3: Home Mail Server | Pending |
 | RELAY-08 | Phase 3: Home Mail Server | Pending |
 | MAIL-01 | Phase 3: Home Mail Server | Pending |
