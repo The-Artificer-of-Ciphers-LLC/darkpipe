@@ -1,0 +1,201 @@
+# Requirements: DarkPipe
+
+**Defined:** 2026-02-08
+**Core Value:** Your email lives on your hardware, encrypted in transit, never stored on someone else's server — and it still works like normal email from the outside.
+
+## v1 Requirements
+
+Requirements for initial release. Each maps to roadmap phases.
+
+### Core Email Transport
+
+- [ ] **RELAY-01**: Cloud relay receives inbound SMTP with TLS (Let's Encrypt)
+- [ ] **RELAY-02**: Cloud relay forwards messages to home device without persistent storage (in-flight only)
+- [ ] **RELAY-03**: Cloud relay sends outbound SMTP via direct MTA delivery
+- [ ] **RELAY-04**: TLS enforced on all SMTP connections (SSL/STARTTLS)
+- [ ] **RELAY-05**: Optional strict mode to refuse mail from plaintext-only peers
+- [ ] **RELAY-06**: User notified when a remote mail server does not support a secure endpoint
+- [ ] **RELAY-07**: IMAP server on home device for mail client access
+- [ ] **RELAY-08**: SMTP submission (port 587) on home device for sending from clients
+
+### Transport Security
+
+- [ ] **TRNS-01**: Encrypted WireGuard tunnel from cloud relay to home device
+- [ ] **TRNS-02**: Alternative mTLS transport option (user-selectable)
+- [ ] **TRNS-03**: Transport auto-reconnects after home internet interruption
+- [ ] **TRNS-04**: NAT traversal without port forwarding on home network
+
+### Certificate Management
+
+- [ ] **CERT-01**: Let's Encrypt certificates via Certbot for public-facing TLS
+- [ ] **CERT-02**: Internal CA (step-ca) for relay↔home transport certificates
+- [ ] **CERT-03**: Configurable certificate rotation (30/60/90 days)
+- [ ] **CERT-04**: Certificate expiry monitoring with alerts
+
+### Email Authentication & Deliverability
+
+- [ ] **AUTH-01**: Automated SPF record generation
+- [ ] **AUTH-02**: Automated DKIM key generation and signing (2048-bit minimum)
+- [ ] **AUTH-03**: Automated DMARC policy generation
+- [ ] **AUTH-04**: DNS validation checker (verify SPF/DKIM/DMARC/MX/PTR setup)
+- [ ] **AUTH-05**: DNS API integration for supported providers (Cloudflare, Route53, etc.)
+- [ ] **AUTH-06**: Manual DNS setup guide with copy-paste templates for unsupported providers
+- [ ] **AUTH-07**: Reverse DNS (PTR) verification and setup documentation
+
+### Home Mail Server
+
+- [ ] **MAIL-01**: User-selectable mail server (Postfix+Dovecot, Stalwart, or Maddy)
+- [ ] **MAIL-02**: Multi-user mailbox support
+- [ ] **MAIL-03**: Multi-domain support
+- [ ] **MAIL-04**: Mail aliases and catch-all addresses
+- [ ] **MAIL-05**: Spam filtering via Rspamd
+- [ ] **MAIL-06**: Greylisting for spam reduction
+
+### Webmail
+
+- [ ] **WEB-01**: Web-based email client (Roundcube or SnappyMail, user-selectable)
+- [ ] **WEB-02**: Mobile-responsive webmail UI
+
+### Calendar & Contacts
+
+- [ ] **CAL-01**: CalDAV server for calendar sync (Radicale, Baikal, or Stalwart built-in)
+- [ ] **CAL-02**: CardDAV server for contacts sync
+
+### Build System
+
+- [ ] **BUILD-01**: GitHub Actions build pipeline — users select components via workflow config
+- [ ] **BUILD-02**: Multi-architecture Docker images (arm64 + amd64)
+- [ ] **BUILD-03**: Pre-built full-featured Docker image as alternative to custom build
+
+### Queue & Offline Handling
+
+- [ ] **QUEUE-01**: Optional encrypted message queue on cloud relay when home device is offline
+- [ ] **QUEUE-02**: Optional queue overflow to Storj or S3-compatible object storage (encrypted at rest)
+- [ ] **QUEUE-03**: User can disable queuing entirely — mail bounces if home device unreachable
+
+### Device Profiles & Client Setup
+
+- [ ] **PROF-01**: Auto-generated Apple .mobileconfig profiles for iOS/macOS
+- [ ] **PROF-02**: Auto-generated Android autoconfig profiles
+- [ ] **PROF-03**: QR code generation for quick device setup
+- [ ] **PROF-04**: Desktop mail client autodiscovery (Thunderbird autoconfig, Outlook autodiscover)
+- [ ] **PROF-05**: App-generated passwords — users never create or manage mail passwords directly
+
+### Monitoring
+
+- [ ] **MON-01**: Mail queue health monitoring
+- [ ] **MON-02**: Mail delivery status visibility
+- [ ] **MON-03**: Cloud relay container health checks
+
+### Deployment & UX
+
+- [ ] **UX-01**: Tiered experience — simple defaults for non-technical users, full control for power users
+- [ ] **UX-02**: Cloud relay runs in smallest possible container footprint
+- [ ] **UX-03**: Runs on Raspberry Pi 4+ (arm64), x64/arm64 Docker/Podman, TrueNAS Scale, Unraid
+
+## v2 Requirements
+
+Deferred to future release. Tracked but not in current roadmap.
+
+### Advanced Security
+
+- **SEC-01**: MTA-STS policy publication for TLS enforcement
+- **SEC-02**: DANE TLSA records for DNSSEC-based certificate verification
+- **SEC-03**: TLS-RPT (TLS reporting) for visibility into TLS failures
+- **SEC-04**: PGP/WKD support for end-to-end encryption
+- **SEC-05**: 2FA (TOTP) for webmail and admin access
+
+### Advanced Mail Features
+
+- **ADV-01**: Sieve filtering rules with ManageSieve protocol
+- **ADV-02**: Vacation/auto-reply via Sieve
+- **ADV-03**: Full-text search with attachment indexing
+- **ADV-04**: Rate limiting for outbound mail (anti-abuse)
+
+### Operations
+
+- **OPS-01**: Prometheus metrics export for homelab monitoring
+- **OPS-02**: Backup/restore automation
+- **OPS-03**: Audit logging for admin actions
+- **OPS-04**: Deliverability scoring integration (mail-tester.com or similar)
+- **OPS-05**: Automated blacklist monitoring with alerts
+
+### Groupware
+
+- **GRP-01**: Calendar web UI (view/edit without native client)
+- **GRP-02**: Contacts web UI (manage without native client)
+- **GRP-03**: Shared calendar support
+
+### Protocol Support
+
+- **PROTO-01**: ActiveSync (Exchange ActiveSync) for push email/contacts/calendar on mobile (evaluate Z-Push or Stalwart built-in)
+
+### AI & Automation
+
+- **AI-01**: Optional AI agent integration — users connect their own AI to act on messages (triage, reply drafts, summarization)
+- **AI-02**: Scripting/rules engine for Gmail-like automation (auto-label, auto-forward, auto-archive based on conditions)
+- **AI-03**: Webhook/API hooks for external automation (n8n, Home Assistant, custom scripts)
+
+### Organization
+
+- **ORG-01**: Advanced mail organization features (labels, tags, smart folders beyond basic IMAP folders)
+- **ORG-02**: Priority inbox or importance scoring
+- **ORG-03**: Conversation threading and grouping improvements
+
+### Community & Governance
+
+- **COM-01**: GitHub feature request section (Discussions category) for community-driven post-v1 prioritization
+- **COM-02**: Public roadmap visibility — community sees what's planned and can vote on priorities
+
+### Post-v1 Service
+
+- **SVC-01**: Managed SMTP relay hosting as paid service option
+- **SVC-02**: Smart host routing (research viability — privacy concerns around message inspection)
+
+## Out of Scope
+
+Explicitly excluded. Documented to prevent scope creep.
+
+| Feature | Reason |
+|---------|--------|
+| POP3 support | Security liability; IMAP is the 2026 baseline. POP3 provides no sync, no folders, and encourages insecure plaintext auth patterns |
+| Native mobile apps | Web-first via webmail + standard IMAP clients (Apple Mail, K-9, FairEmail) |
+| Real-time chat/messaging | Different problem domain — email is asynchronous |
+| Built-in file sharing (Nextcloud-style) | Massive scope creep; users install Nextcloud separately if needed |
+| AI-powered spam/categorization | Privacy concern — adds dependencies, complexity; Rspamd Bayesian learning sufficient |
+| Built-in VPN/Tor routing | Separate concern; document how to run behind VPN if desired |
+| OAuth/social login | Email+password + app-generated passwords sufficient for v1 |
+| Automatic Gmail/Outlook migration | High complexity, API changes break it; provide manual migration guide |
+| Self-hosted DNS server | Increases attack surface; use existing DNS providers with API integration |
+| Multi-tenant SaaS mode | DarkPipe is self-hosted for single user/family; multi-tenancy adds vast complexity |
+| Windows/macOS native server | Linux is email server standard; production = Linux containers |
+| Proprietary hardware | Helm failed this way — software-only, commodity hardware |
+| Blockchain-based identity | Immature, complex, confusing — standard DNS + TLS certificates |
+
+## Traceability
+
+Which phases cover which requirements. Updated during roadmap creation.
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| RELAY-01 through RELAY-08 | TBD | Pending |
+| TRNS-01 through TRNS-04 | TBD | Pending |
+| CERT-01 through CERT-04 | TBD | Pending |
+| AUTH-01 through AUTH-07 | TBD | Pending |
+| MAIL-01 through MAIL-06 | TBD | Pending |
+| WEB-01 through WEB-02 | TBD | Pending |
+| CAL-01 through CAL-02 | TBD | Pending |
+| BUILD-01 through BUILD-03 | TBD | Pending |
+| QUEUE-01 through QUEUE-03 | TBD | Pending |
+| PROF-01 through PROF-05 | TBD | Pending |
+| MON-01 through MON-03 | TBD | Pending |
+| UX-01 through UX-03 | TBD | Pending |
+
+**Coverage:**
+- v1 requirements: 45 total
+- Mapped to phases: 0 (pending roadmap creation)
+- Unmapped: 45 (pending roadmap creation)
+
+---
+*Requirements defined: 2026-02-08*
+*Last updated: 2026-02-08 after initial definition*
