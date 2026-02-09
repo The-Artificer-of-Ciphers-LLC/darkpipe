@@ -33,12 +33,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. User can select mTLS as an alternative transport mechanism and traffic flows encrypted between cloud and home
   3. After simulating a home internet outage (unplug for 60 seconds), the tunnel automatically re-establishes and data flows resume without manual intervention
   4. Internal transport certificates are issued by a private CA (step-ca) and are distinct from public-facing TLS certificates
-**Plans**: TBD
+**Plans:** 3 plans
 
 Plans:
-- [ ] 01-01: VPS provider validation and WireGuard tunnel setup
-- [ ] 01-02: mTLS alternative transport and internal CA
-- [ ] 01-03: Auto-reconnection and NAT traversal hardening
+- [ ] 01-01-PLAN.md -- WireGuard tunnel foundation: Go module, config generation, deployment scripts, systemd auto-restart
+- [ ] 01-02-PLAN.md -- mTLS alternative transport and internal CA: step-ca PKI, mTLS server/client, cert renewal automation
+- [ ] 01-03-PLAN.md -- Auto-reconnection hardening: WireGuard health monitoring, outage simulation, VPS provider guide
 
 ### Phase 2: Cloud Relay
 **Goal**: An internet-facing SMTP gateway receives inbound mail and sends outbound mail with TLS encryption, forwarding everything to the home device without storing messages persistently
@@ -179,7 +179,7 @@ Note: Phases 5 and 6 can execute in parallel after their dependencies are met. P
 
 | Phase | Plans Complete | Status | Completed |
 |-------|---------------|--------|-----------|
-| 1. Transport Layer | 0/3 | Not started | - |
+| 1. Transport Layer | 0/3 | Planned | - |
 | 2. Cloud Relay | 0/3 | Not started | - |
 | 3. Home Mail Server | 0/3 | Not started | - |
 | 4. DNS & Email Authentication | 0/3 | Not started | - |
