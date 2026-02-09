@@ -15,8 +15,8 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **RELAY-04**: TLS enforced on all SMTP connections (SSL/STARTTLS)
 - [x] **RELAY-05**: Optional strict mode to refuse mail from plaintext-only peers
 - [x] **RELAY-06**: User notified when a remote mail server does not support a secure endpoint
-- [ ] **RELAY-07**: IMAP server on home device for mail client access
-- [ ] **RELAY-08**: SMTP submission (port 587) on home device for sending from clients
+- [x] **RELAY-07**: IMAP server on home device for mail client access
+- [x] **RELAY-08**: SMTP submission (port 587) on home device for sending from clients
 
 ### Transport Security
 
@@ -44,12 +44,12 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Home Mail Server
 
-- [ ] **MAIL-01**: User-selectable mail server (Postfix+Dovecot, Stalwart, or Maddy)
-- [ ] **MAIL-02**: Multi-user mailbox support
-- [ ] **MAIL-03**: Multi-domain support
-- [ ] **MAIL-04**: Mail aliases and catch-all addresses
-- [ ] **MAIL-05**: Spam filtering via Rspamd
-- [ ] **MAIL-06**: Greylisting for spam reduction
+- [x] **MAIL-01**: User-selectable mail server (Postfix+Dovecot, Stalwart, or Maddy)
+- [x] **MAIL-02**: Multi-user mailbox support
+- [x] **MAIL-03**: Multi-domain support
+- [x] **MAIL-04**: Mail aliases and catch-all addresses
+- [x] **MAIL-05**: Spam filtering via Rspamd
+- [x] **MAIL-06**: Greylisting for spam reduction
 
 ### Webmail
 
@@ -191,14 +191,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RELAY-06 | Phase 2: Cloud Relay | ✓ Complete |
 | CERT-01 | Phase 2: Cloud Relay | ✓ Complete |
 | UX-02 | Phase 2: Cloud Relay | ✓ Complete |
-| RELAY-07 | Phase 3: Home Mail Server | Pending |
-| RELAY-08 | Phase 3: Home Mail Server | Pending |
-| MAIL-01 | Phase 3: Home Mail Server | Pending |
-| MAIL-02 | Phase 3: Home Mail Server | Pending |
-| MAIL-03 | Phase 3: Home Mail Server | Pending |
-| MAIL-04 | Phase 3: Home Mail Server | Pending |
-| MAIL-05 | Phase 3: Home Mail Server | Pending |
-| MAIL-06 | Phase 3: Home Mail Server | Pending |
+| RELAY-07 | Phase 3: Home Mail Server | ✓ Complete |
+| RELAY-08 | Phase 3: Home Mail Server | ✓ Complete |
+| MAIL-01 | Phase 3: Home Mail Server | ✓ Complete |
+| MAIL-02 | Phase 3: Home Mail Server | ✓ Complete |
+| MAIL-03 | Phase 3: Home Mail Server | ✓ Complete |
+| MAIL-04 | Phase 3: Home Mail Server | ✓ Complete |
+| MAIL-05 | Phase 3: Home Mail Server | ✓ Complete |
+| MAIL-06 | Phase 3: Home Mail Server | ✓ Complete |
 | AUTH-01 | Phase 4: DNS & Email Authentication | Pending |
 | AUTH-02 | Phase 4: DNS & Email Authentication | Pending |
 | AUTH-03 | Phase 4: DNS & Email Authentication | Pending |

@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Transport Layer** - Encrypted tunnel between cloud relay and home device with NAT traversal (completed 2026-02-09)
 - [x] **Phase 2: Cloud Relay** - Minimal internet-facing SMTP gateway that receives and forwards mail (completed 2026-02-09)
-- [ ] **Phase 3: Home Mail Server** - Full-featured mail server with IMAP access on user-owned hardware
+- [x] **Phase 3: Home Mail Server** - Full-featured mail server with IMAP access on user-owned hardware (completed 2026-02-09)
 - [ ] **Phase 4: DNS & Email Authentication** - Automated SPF/DKIM/DMARC setup and DNS provider integration
 - [ ] **Phase 5: Queue & Offline Handling** - Encrypted message queuing when home device is unreachable
 - [ ] **Phase 6: Webmail & Groupware** - Web-based email access with calendar and contacts sync
@@ -70,9 +70,9 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 03-01-PLAN.md -- Mail server foundation: Stalwart, Maddy, and Postfix+Dovecot configs with Docker compose profiles for IMAP/SMTP submission
-- [ ] 03-02-PLAN.md -- Multi-user mailboxes, multi-domain support, aliases, and catch-all configuration for all three options
-- [ ] 03-03-PLAN.md -- Rspamd spam filtering with greylisting, milter integration, and phase integration test suite
+- [x] 03-01-PLAN.md -- Mail server foundation: Stalwart, Maddy, and Postfix+Dovecot configs with Docker compose profiles for IMAP/SMTP submission
+- [x] 03-02-PLAN.md -- Multi-user mailboxes, multi-domain support, aliases, and catch-all configuration for all three options
+- [x] 03-03-PLAN.md -- Rspamd spam filtering with greylisting, milter integration, and phase integration test suite
 
 ### Phase 4: DNS & Email Authentication
 **Goal**: Email sent from DarkPipe passes SPF, DKIM, and DMARC authentication at all major providers (Gmail, Outlook, Yahoo), with DNS records automated or clearly documented for manual setup
@@ -181,7 +181,7 @@ Note: Phases 5 and 6 can execute in parallel after their dependencies are met. P
 |-------|---------------|--------|-----------|
 | 1. Transport Layer | 3/3 | Complete | 2026-02-09 |
 | 2. Cloud Relay | 3/3 | Complete | 2026-02-09 |
-| 3. Home Mail Server | 0/3 | Not started | - |
+| 3. Home Mail Server | 3/3 | Complete | 2026-02-09 |
 | 4. DNS & Email Authentication | 0/3 | Not started | - |
 | 5. Queue & Offline Handling | 0/2 | Not started | - |
 | 6. Webmail & Groupware | 0/2 | Not started | - |
