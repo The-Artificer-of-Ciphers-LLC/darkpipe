@@ -9,19 +9,19 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 
 ## Current Position
 
-Phase: 2 of 9 (Cloud Relay)
-Plan: 3 of 3 in current phase
-Status: Phase Complete
-Last activity: 2026-02-09 -- Completed Phase 02 (Cloud Relay) - all 3 plans executed, verified
+Phase: 3 of 9 (Home Mail Server)
+Plan: 1 of 3 in current phase
+Status: In Progress
+Last activity: 2026-02-09 -- Completed 03-01-PLAN.md (Home mail server foundation)
 
-Progress: [█████░░░░░] 50%
+Progress: [██████░░░░] 56%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6
-- Average duration: 6.3 minutes
-- Total execution time: 0.65 hours
+- Total plans completed: 7
+- Average duration: 5.9 minutes
+- Total execution time: 0.68 hours
 
 **By Phase:**
 
@@ -29,10 +29,11 @@ Progress: [█████░░░░░] 50%
 |-------|-------|-------|----------|
 | 01 (Transport Layer) | 3 | 889s | 296s |
 | 02 (Cloud Relay) | 3 | 1142s | 381s |
+| 03 (Home Mail Server) | 1 | 300s | 300s |
 
 **Recent Trend:**
-- Last 5 plans: 270s, 234s, 366s, 542s
-- Trend: Increasing complexity (4-9 minutes per plan, test suite plans take longer)
+- Last 5 plans: 234s, 366s, 542s, 300s
+- Trend: Configuration plans faster (5 min), test suite plans slower (9 min)
 
 *Updated after each plan completion*
 
@@ -74,6 +75,10 @@ Recent decisions affecting current work:
 - [02-03]: Docker image optimized: Alpine 3.21, stripped binary, .dockerignore, target ~35MB
 - [02-03]: Docker compose 256MB memory limit enforced via deploy.resources.limits
 - [02-03]: All tests use stdlib testing only (no external frameworks) for zero dependencies
+- [Phase 03-01]: Docker compose profiles for mail server selection (stalwart, maddy, postfix-dovecot)
+- [Phase 03-01]: LMDB format for Postfix maps (BerkleyDB deprecated in Alpine 3.13+)
+- [Phase 03-01]: Self-signed TLS for IMAP/submission within WireGuard tunnel
+- [Phase 03-01]: Virtual mailbox domains only (vmail UID/GID 5000, no system users)
 
 ### Pending Todos
 
@@ -88,6 +93,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Completed Phase 02 (Cloud Relay) - all 3 plans executed, verified (human_needed items deferred to deployment)
-Resume file: .planning/phases/02-cloud-relay/02-VERIFICATION.md
-Next phase: Phase 03 (Home Mail Server)
+Stopped at: Completed 03-01-PLAN.md (Home mail server foundation with three selectable options)
+Resume file: .planning/phases/03-home-mail-server/03-01-SUMMARY.md
+Next plan: 03-02-PLAN.md (User and domain management)
