@@ -32,6 +32,9 @@ submission inet n       -       n       -       -       smtpd
   -o smtpd_client_restrictions=permit_sasl_authenticated,reject
   -o smtpd_recipient_restrictions=permit_sasl_authenticated,reject
   -o milter_macro_daemon_name=ORIGINATING
+  -o smtpd_milters=
+  -o non_smtpd_milters=
+  # Bypass Rspamd spam filtering for authenticated users sending outbound mail
 
 # ============================================================================
 # Internal Services

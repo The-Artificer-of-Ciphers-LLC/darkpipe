@@ -222,11 +222,22 @@ max-retry = 72h
 hostname = "mail.example.com"
 
 # ============================================================================
-# Spam/Virus Filtering (Future Integration)
+# Spam/Virus Filtering - Rspamd Integration
 # ============================================================================
 
-# Rspamd integration will be added in Phase 03 Plan 02
-# [session.data.milter."rspamd"]
-# enable = true
-# hostname = "rspamd"
-# port = 11332
+[session.data.milter."rspamd"]
+enable = true
+hostname = "rspamd"
+port = 11332
+timeout = "10s"
+tempfail-on-error = true
+
+# Milter applies to all listeners by default (SMTP port 25 + submission port 587)
+# For authenticated users (submission), we want to bypass spam filtering.
+# Stalwart's milter integration supports conditional execution.
+# Skip milter for authenticated sessions to avoid scanning outbound mail.
+#
+# Note: As of Stalwart 0.15.4, milter scoping is global.
+# If per-listener milter support is added in future versions, configure:
+#   - Enable milter for listener."smtp" (port 25, inbound from cloud relay)
+#   - Disable milter for listener."submission" (port 587, authenticated users)

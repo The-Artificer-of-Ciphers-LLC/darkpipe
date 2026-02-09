@@ -173,6 +173,27 @@ readme_directory = no
 compatibility_level = 3.6
 
 # ============================================================================
+# Milter Integration - Rspamd Spam Filtering
+# ============================================================================
+
+# Rspamd milter integration (inbound SMTP port 25)
+# Scans all incoming mail for spam before delivery to mailbox
+smtpd_milters = inet:rspamd:11332
+non_smtpd_milters = inet:rspamd:11332
+
+# Milter protocol version 6
+milter_protocol = 6
+
+# If Rspamd is down, accept mail anyway (prevents mail loss)
+milter_default_action = accept
+
+# Milter macros to pass to Rspamd for spam analysis
+milter_mail_macros = i {mail_addr} {client_addr} {client_name} {auth_authen}
+
+# Note: Submission port (587) overrides smtpd_milters to empty in master.cf
+# This ensures outbound mail from authenticated users bypasses spam filtering
+
+# ============================================================================
 # LMDB-Specific Settings
 # ============================================================================
 
