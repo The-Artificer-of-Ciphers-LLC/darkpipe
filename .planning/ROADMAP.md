@@ -130,12 +130,12 @@ Plans:
   3. Images build and run correctly on Raspberry Pi 4 (arm64), x64 Docker, TrueNAS Scale, and Unraid
   4. A non-technical user can deploy using simple defaults, while a power user can override every configuration option
   5. Multi-architecture images (arm64 + amd64) are produced from a single workflow run
-**Plans**: TBD
+**Plans:** 3 plans
 
 Plans:
-- [ ] 07-01: GitHub Actions build pipeline with component selection
-- [ ] 07-02: Multi-architecture builds and pre-built image publishing
-- [ ] 07-03: Platform validation (RPi4, TrueNAS Scale, Unraid) and tiered UX
+- [ ] 07-01-PLAN.md -- Dockerfile optimization (multi-arch, OCI labels, setup detection, secrets support) and GitHub Actions workflows (custom build, prebuilt, release)
+- [ ] 07-02-PLAN.md -- Interactive Go setup CLI (darkpipe-setup) with live DNS/SMTP validation, Docker Compose generation, Docker secrets management, and upgrade-aware config migration
+- [ ] 07-03-PLAN.md -- TrueNAS Scale and Unraid native app templates, platform deployment guides (RPi4, TrueNAS, Unraid, Proxmox, Synology, Mac Silicon), and phase integration test suite
 
 ### Phase 8: Device Profiles & Client Setup
 **Goal**: Users onboard new devices (phones, tablets, desktops) to their DarkPipe mail server in under 2 minutes without manually entering server addresses, ports, or security settings
@@ -185,7 +185,7 @@ Note: Phases 5 and 6 can execute in parallel after their dependencies are met. P
 | 4. DNS & Email Authentication | 3/3 | Complete | 2026-02-14 |
 | 5. Queue & Offline Handling | 2/2 | Complete | 2026-02-14 |
 | 6. Webmail & Groupware | 2/2 | Complete | 2026-02-14 |
-| 7. Build System & Deployment | 0/3 | Not started | - |
+| 7. Build System & Deployment | 0/3 | Planned | - |
 | 8. Device Profiles & Client Setup | 0/3 | Not started | - |
 | 9. Monitoring & Observability | 0/2 | Not started | - |
 
