@@ -1,0 +1,4 @@
+# Radicale htpasswd users file (bcrypt encryption)
+# Managed by sync-users.sh — DO NOT edit manually
+# Format: user@domain:$2y$05$bcrypthash
+# Sync from mail server: ./caldav-carddav/sync-users.sh

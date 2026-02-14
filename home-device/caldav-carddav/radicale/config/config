@@ -1,0 +1,26 @@
+[server]
+hosts = 0.0.0.0:5232
+max_connections = 20
+max_content_length = 100000000
+timeout = 30
+
+[auth]
+type = htpasswd
+htpasswd_filename = /data/users
+htpasswd_encryption = bcrypt
+delay = 1
+
+[rights]
+type = from_file
+file = /etc/radicale/rights
+
+[storage]
+type = multifilesystem
+filesystem_folder = /data/collections
+
+[web]
+type = internal
+
+[logging]
+level = info
+mask_passwords = true

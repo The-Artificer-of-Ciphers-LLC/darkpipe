@@ -1,0 +1,33 @@
+# DarkPipe Radicale rights file
+# Defines CalDAV/CardDAV sharing permissions
+# Edit this file to customize calendar/contact sharing between household members
+
+# Allow authenticated users to discover their own principal URL
+[principal-discovery]
+user: .+
+collection:
+permissions: R
+
+# Owner has full access to their own collections
+[owner-access]
+user: .+
+collection: {user}/.*
+permissions: rw
+
+# Allow users to create top-level collections in their namespace
+[owner-root]
+user: .+
+collection: {user}
+permissions: RW
+
+# Shared family calendar and address book (all authenticated users)
+[shared-family]
+user: .+
+collection: shared/.*
+permissions: rw
+
+# Shared collection root access
+[shared-root]
+user: .+
+collection: shared
+permissions: R
