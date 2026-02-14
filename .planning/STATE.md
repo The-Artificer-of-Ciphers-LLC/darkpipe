@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-08)
 
 **Core value:** Your email lives on your hardware, encrypted in transit, never stored on someone else's server -- and it still works like normal email from the outside.
-**Current focus:** ALL PHASES COMPLETE — v1 milestone ready for completion
+**Current focus:** Phase 10 - Mail Migration (added before milestone completion)
 
 ## Current Position
 
-Phase: 9 of 9 (Monitoring & Observability) ✓ Complete
-Plan: 3 of 3 complete
-Status: ALL 9 PHASES COMPLETE — 50 v1 requirements implemented, gap closure done
-Last activity: 2026-02-14 -- Phase 9 gap closure (profile server monitoring integration)
+Phase: 10 of 10 (Mail Migration)
+Plan: 0 of 0 (not yet planned)
+Status: Phase 10 added — migration tooling for existing email providers
+Last activity: 2026-02-14 -- Added Phase 10 (Mail Migration) before milestone completion
 
-Progress: [██████████] 100%
+Progress: [█████████░] 90%
 
 ## Performance Metrics
 
@@ -193,7 +193,7 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-- **Mail migration tool for existing providers** — Migration from MailCow, iCloud, Gmail, Outlook, other self-hosted (v2 scope)
+None — migration tool promoted to Phase 10.
 
 ### Blockers/Concerns
 
@@ -204,6 +204,6 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: All phases complete, gap closure done
-Resume file: .planning/phases/09-monitoring-observability/09-VERIFICATION.md
-Next plan: `/gsd:complete-milestone` — v1 milestone complete
+Stopped at: Phase 10 added, needs discuss → plan → execute
+Resume file: .planning/ROADMAP.md
+Next plan: `/gsd:discuss-phase 10` → `/gsd:plan-phase 10` → `/gsd:execute-phase 10`

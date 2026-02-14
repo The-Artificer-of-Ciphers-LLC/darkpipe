@@ -21,6 +21,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 7: Build System & Deployment** - GitHub Actions pipeline for user-customized multi-arch Docker images (completed 2026-02-14)
 - [x] **Phase 8: Device Profiles & Client Setup** - Auto-generated device configuration for seamless mail client onboarding (completed 2026-02-14)
 - [x] **Phase 9: Monitoring & Observability** - Mail health visibility, delivery tracking, and certificate lifecycle management (completed 2026-02-14)
+- [ ] **Phase 10: Mail Migration** - Import mailboxes, contacts, and calendars from existing email providers via IMAP sync and provider APIs
 
 ## Phase Details
 
@@ -171,10 +172,24 @@ Plans:
 - [x] 09-02-PLAN.md -- Alert notification system with rate limiting, certificate lifecycle management, and DKIM rotation
 - [x] 09-03-PLAN.md -- Status aggregator, CLI command, web dashboard, Docker health checks, push monitoring, and phase test suite
 
+### Phase 10: Mail Migration
+**Goal**: Users can migrate their existing email, contacts, and calendars from popular providers (MailCow, iCloud, Gmail, Outlook, Mailu, docker-mailserver) to DarkPipe with minimal manual effort
+**Depends on**: Phase 3, Phase 6
+**Requirements**: MIG-01 (new)
+**Success Criteria** (what must be TRUE):
+  1. User can migrate mailboxes from an existing IMAP server preserving folder hierarchy, flags, and dates
+  2. User can import contacts and calendars from CalDAV/CardDAV sources or .vcf/.ics exports
+  3. MailCow users can migrate users, aliases, and mailboxes via API export
+  4. CLI wizard guides user through migration with `darkpipe migrate --from <provider>`
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 10 to break down)
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 
 Note: Phases 5 and 6 can execute in parallel after their dependencies are met. Phase 8 can begin once Phase 3 and Phase 6 complete, independent of Phases 4, 5, and 7.
 
@@ -189,7 +204,8 @@ Note: Phases 5 and 6 can execute in parallel after their dependencies are met. P
 | 7. Build System & Deployment | 3/3 | Complete | 2026-02-14 |
 | 8. Device Profiles & Client Setup | 3/3 | Complete | 2026-02-14 |
 | 9. Monitoring & Observability | 3/3 | Complete | 2026-02-14 |
+| 10. Mail Migration | 0/0 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-08*
-*Depth: Comprehensive (9 phases, 50 requirements mapped)*
+*Depth: Comprehensive (10 phases, 50 requirements mapped)*
