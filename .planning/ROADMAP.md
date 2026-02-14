@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: Home Mail Server** - Full-featured mail server with IMAP access on user-owned hardware (completed 2026-02-09)
 - [x] **Phase 4: DNS & Email Authentication** - Automated SPF/DKIM/DMARC setup and DNS provider integration (completed 2026-02-14)
 - [x] **Phase 5: Queue & Offline Handling** - Encrypted message queuing when home device is unreachable (completed 2026-02-14)
-- [ ] **Phase 6: Webmail & Groupware** - Web-based email access with calendar and contacts sync
+- [x] **Phase 6: Webmail & Groupware** - Web-based email access with calendar and contacts sync (completed 2026-02-14)
 - [ ] **Phase 7: Build System & Deployment** - GitHub Actions pipeline for user-customized multi-arch Docker images
 - [ ] **Phase 8: Device Profiles & Client Setup** - Auto-generated device configuration for seamless mail client onboarding
 - [ ] **Phase 9: Monitoring & Observability** - Mail health visibility, delivery tracking, and certificate lifecycle management
@@ -117,8 +117,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 06-01-PLAN.md -- Caddy reverse proxy on cloud relay + Roundcube/SnappyMail webmail on home device with IMAP passthrough auth and mobile-responsive UI
-- [ ] 06-02-PLAN.md -- Radicale CalDAV/CardDAV for Maddy/Postfix+Dovecot, Stalwart built-in CalDAV/CardDAV, well-known auto-discovery URLs, shared family calendar/contacts, and phase integration test suite
+- [x] 06-01-PLAN.md -- Caddy reverse proxy on cloud relay + Roundcube/SnappyMail webmail on home device with IMAP passthrough auth and mobile-responsive UI
+- [x] 06-02-PLAN.md -- Radicale CalDAV/CardDAV for Maddy/Postfix+Dovecot, Stalwart built-in CalDAV/CardDAV, well-known auto-discovery URLs, shared family calendar/contacts, and phase integration test suite
 
 ### Phase 7: Build System & Deployment
 **Goal**: Users produce custom Docker images tailored to their chosen stack components via GitHub Actions, with pre-built images available as an alternative, running on all target platforms
@@ -184,7 +184,7 @@ Note: Phases 5 and 6 can execute in parallel after their dependencies are met. P
 | 3. Home Mail Server | 3/3 | Complete | 2026-02-09 |
 | 4. DNS & Email Authentication | 3/3 | Complete | 2026-02-14 |
 | 5. Queue & Offline Handling | 2/2 | Complete | 2026-02-14 |
-| 6. Webmail & Groupware | 0/2 | Planned | - |
+| 6. Webmail & Groupware | 2/2 | Complete | 2026-02-14 |
 | 7. Build System & Deployment | 0/3 | Not started | - |
 | 8. Device Profiles & Client Setup | 0/3 | Not started | - |
 | 9. Monitoring & Observability | 0/2 | Not started | - |

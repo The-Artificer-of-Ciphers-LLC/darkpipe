@@ -209,10 +209,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | QUEUE-01 | Phase 5: Queue & Offline Handling | ✓ Complete |
 | QUEUE-02 | Phase 5: Queue & Offline Handling | ✓ Complete |
 | QUEUE-03 | Phase 5: Queue & Offline Handling | ✓ Complete |
-| WEB-01 | Phase 6: Webmail & Groupware | Pending |
-| WEB-02 | Phase 6: Webmail & Groupware | Pending |
-| CAL-01 | Phase 6: Webmail & Groupware | Pending |
-| CAL-02 | Phase 6: Webmail & Groupware | Pending |
+| WEB-01 | Phase 6: Webmail & Groupware | ✓ Complete |
+| WEB-02 | Phase 6: Webmail & Groupware | ✓ Complete |
+| CAL-01 | Phase 6: Webmail & Groupware | ✓ Complete |
+| CAL-02 | Phase 6: Webmail & Groupware | ✓ Complete |
 | BUILD-01 | Phase 7: Build System & Deployment | Pending |
 | BUILD-02 | Phase 7: Build System & Deployment | Pending |
 | BUILD-03 | Phase 7: Build System & Deployment | Pending |

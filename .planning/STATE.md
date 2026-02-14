@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-08)
 
 **Core value:** Your email lives on your hardware, encrypted in transit, never stored on someone else's server -- and it still works like normal email from the outside.
-**Current focus:** Phase 6 - Webmail & Groupware (next up)
+**Current focus:** Phase 7 - Build System & Deployment (next up)
 
 ## Current Position
 
-Phase: 5 of 9 (Queue & Offline Handling) ✓ Complete
-Plan: All plans complete through Phase 5
-Status: Phase 5 complete — ready for Phase 6
-Last activity: 2026-02-14 -- Phase 5 complete (Queue & Offline Handling)
+Phase: 6 of 9 (Webmail & Groupware) ✓ Complete
+Plan: 2 of 2 complete
+Status: Phase 6 complete — webmail, CalDAV/CardDAV, integration tests all deployed
+Last activity: 2026-02-14 -- Phase 6 complete (Webmail & Groupware)
 
-Progress: [████████░░] 52%
+Progress: [█████████░] 67%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 14
-- Average duration: 6.5 minutes
-- Total execution time: 1.57 hours
+- Total plans completed: 17
+- Average duration: 5.7 minutes
+- Total execution time: 1.65 hours
 
 **By Phase:**
 
@@ -32,10 +32,11 @@ Progress: [████████░░] 52%
 | 03 (Home Mail Server) | 3 | 881s | 294s |
 | 04 (DNS & Email Auth) | 3 | 1488s | 496s |
 | 05 (Queue & Offline) | 2 | 1335s | 668s |
+| 06 (Webmail & Groupware) | 2 | 353s | 177s |
 
 **Recent Trend:**
-- Last 5 plans: 559s, 582s, 567s, 768s (05-02), avg: 619s
-- Trend: Phase 05 complete - Queue & Offline Handling (12m 48s avg)
+- Last 5 plans: 567s, 768s, 129s (06-01), 224s (06-02), avg: 422s
+- Trend: Phase 06 complete — 2 plans in ~6 min total
 
 ## Accumulated Context
 
@@ -115,6 +116,15 @@ Recent decisions affecting current work:
 - [05-01]: Rate limit to 10 messages/tick to prevent thundering herd on reconnection
 - [Phase 05-02]: Hash-based S3 key generation (SHA-256 of Message-ID) to avoid special character issues
 - [Phase 05-02]: Overflow disabled by default (requires user-provided S3 credentials)
+- [06-01]: Caddy reverse proxy on cloud relay (auto-HTTPS, lightweight, Go-based aligns with stack)
+- [06-01]: IMAP passthrough authentication (no separate webmail user database)
+- [06-01]: Roundcube Elastic skin for mobile responsiveness (WEB-02 requirement)
+- [06-01]: extra_hosts mail-server:host-gateway pattern for mail server discovery
+- [06-01]: 60-minute session timeout with auto-refresh to avoid UX frustration
+- [06-02]: Radicale for Maddy/Postfix+Dovecot (Stalwart uses built-in CalDAV/CardDAV)
+- [06-02]: Rights file ACLs for shared family calendar and address book
+- [06-02]: Well-known URL redirects for iOS/macOS/Android CalDAV/CardDAV auto-discovery
+- [06-02]: sync-users.sh syncs mail server users to Radicale htpasswd (same credentials)
 
 ### Pending Todos
 
@@ -129,6 +139,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Phase 5 complete — all docs updated
-Resume file: .planning/ROADMAP.md
-Next plan: Phase 6: Webmail & Groupware (discuss → research → plan → execute)
+Stopped at: Phase 6 complete (Webmail & Groupware)
+Resume file: .planning/phases/06-webmail-groupware/06-VERIFICATION.md
+Next plan: Phase 7: Build System & Deployment (needs discuss → plan → execute)
