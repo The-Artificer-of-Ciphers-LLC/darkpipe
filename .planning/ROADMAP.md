@@ -84,12 +84,12 @@ Plans:
   3. For supported DNS providers (Cloudflare, Route53), records are created automatically via API with a single command
   4. For unsupported DNS providers, the tool generates copy-paste DNS record templates with clear instructions
   5. Reverse DNS (PTR) verification confirms the cloud relay IP resolves to the mail server FQDN and vice versa
-**Plans**: TBD
+**Plans:** 3 plans
 
 Plans:
-- [ ] 04-01: SPF/DKIM/DMARC record generation and DKIM signing
-- [ ] 04-02: DNS provider API integration (Cloudflare, Route53)
-- [ ] 04-03: DNS validation checker and PTR verification tooling
+- [ ] 04-01-PLAN.md -- DKIM key generation (2048-bit RSA), SPF/DKIM/DMARC/MX record generation, DKIM signing via emersion/go-msgauth, DNS-RECORDS.md manual guide output
+- [ ] 04-02-PLAN.md -- DNSProvider interface, Cloudflare (cloudflare-go v6) and Route53 (aws-sdk-go-v2) API integration, NS-based auto-detection, dry-run safety, propagation polling
+- [ ] 04-03-PLAN.md -- DNS validation checker (miekg/dns), PTR verification, Authentication-Results parser, unified `darkpipe dns-setup` CLI with --validate-only, --json, --rotate-dkim modes
 
 ### Phase 5: Queue & Offline Handling
 **Goal**: Users choose how mail is handled when their home device is offline -- queue it encrypted on the cloud relay, overflow to S3-compatible storage, or bounce it immediately
@@ -182,7 +182,7 @@ Note: Phases 5 and 6 can execute in parallel after their dependencies are met. P
 | 1. Transport Layer | 3/3 | Complete | 2026-02-09 |
 | 2. Cloud Relay | 3/3 | Complete | 2026-02-09 |
 | 3. Home Mail Server | 3/3 | Complete | 2026-02-09 |
-| 4. DNS & Email Authentication | 0/3 | Not started | - |
+| 4. DNS & Email Authentication | 0/3 | Planning complete | - |
 | 5. Queue & Offline Handling | 0/2 | Not started | - |
 | 6. Webmail & Groupware | 0/2 | Not started | - |
 | 7. Build System & Deployment | 0/3 | Not started | - |
