@@ -9,19 +9,19 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 
 ## Current Position
 
-Phase: 6 of 9 (Webmail & Groupware) ✓ Complete
-Plan: 2 of 2 complete
-Status: Phase 6 complete — webmail, CalDAV/CardDAV, integration tests all deployed
-Last activity: 2026-02-14 -- Phase 6 complete (Webmail & Groupware)
+Phase: 7 of 9 (Build System & Deployment)
+Plan: 1 of 3 complete
+Status: Multi-arch Docker images with CI/CD workflows complete — custom build selection and pre-built stacks available
+Last activity: 2026-02-14 -- Plan 07-01 complete (Multi-Architecture Docker Images and CI/CD Workflows)
 
-Progress: [█████████░] 67%
+Progress: [█████████░] 70%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 17
-- Average duration: 5.7 minutes
-- Total execution time: 1.65 hours
+- Total plans completed: 18
+- Average duration: 5.4 minutes
+- Total execution time: 1.7 hours
 
 **By Phase:**
 
@@ -33,10 +33,11 @@ Progress: [█████████░] 67%
 | 04 (DNS & Email Auth) | 3 | 1488s | 496s |
 | 05 (Queue & Offline) | 2 | 1335s | 668s |
 | 06 (Webmail & Groupware) | 2 | 353s | 177s |
+| 07 (Build System & Deployment) | 1 | 294s | 294s |
 
 **Recent Trend:**
-- Last 5 plans: 567s, 768s, 129s (06-01), 224s (06-02), avg: 422s
-- Trend: Phase 06 complete — 2 plans in ~6 min total
+- Last 5 plans: 768s, 129s (06-01), 224s (06-02), 294s (07-01), avg: 354s
+- Trend: Phase 07 started — multi-arch images and CI/CD complete in ~5 min
 
 ## Accumulated Context
 
@@ -125,6 +126,14 @@ Recent decisions affecting current work:
 - [06-02]: Rights file ACLs for shared family calendar and address book
 - [06-02]: Well-known URL redirects for iOS/macOS/Android CalDAV/CardDAV auto-discovery
 - [06-02]: sync-users.sh syncs mail server users to Radicale htpasswd (same credentials)
+- [07-01]: Multi-arch support via TARGETARCH build arg (buildx sets automatically)
+- [07-01]: OCI labels on all images (source, version, description, licenses)
+- [07-01]: Netcat health checks (more reliable than process-based checks)
+- [07-01]: Docker secrets via _FILE suffix convention for all sensitive values
+- [07-01]: Setup detection at /config/.darkpipe-configured
+- [07-01]: GHCR as sole registry (no Docker Hub)
+- [07-01]: Pre-built images for two stacks: default (Stalwart+SnappyMail) and conservative (Postfix+Dovecot+Roundcube+Radicale)
+- [07-01]: GitHub Actions cache (type=gha) for layer optimization
 
 ### Pending Todos
 
@@ -139,6 +148,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Phase 6 complete (Webmail & Groupware)
-Resume file: .planning/phases/06-webmail-groupware/06-VERIFICATION.md
-Next plan: Phase 7: Build System & Deployment (needs discuss → plan → execute)
+Stopped at: Completed 07-01-PLAN.md
+Resume file: .planning/phases/07-build-system-deployment/07-01-SUMMARY.md
+Next plan: 07-02-PLAN.md (Interactive Setup Script)
