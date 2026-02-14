@@ -9,19 +9,19 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 
 ## Current Position
 
-Phase: 7 of 9 (Build System & Deployment) ✓ Complete
-Plan: 3 of 3 complete
-Status: Phase 7 complete — Dockerfiles, CI/CD, setup CLI, platform templates all deployed
-Last activity: 2026-02-14 -- Phase 7 complete (Build System & Deployment)
+Phase: 8 of 9 (Device Profiles & Client Setup)
+Plan: 1 of 3 complete
+Status: Phase 8 in progress — App password & profile generation core complete
+Last activity: 2026-02-14 -- Completed 08-01-PLAN.md (App Password & Profile Generation Core)
 
-Progress: [█████████░] 78%
+Progress: [█████████░] 81%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 20
-- Average duration: 5.4 minutes
-- Total execution time: 1.9 hours
+- Total plans completed: 21
+- Average duration: 5.5 minutes
+- Total execution time: 2.0 hours
 
 **By Phase:**
 
@@ -34,10 +34,11 @@ Progress: [█████████░] 78%
 | 05 (Queue & Offline) | 2 | 1335s | 668s |
 | 06 (Webmail & Groupware) | 2 | 353s | 177s |
 | 07 (Build System & Deployment) | 3 | 1245s | 415s |
+| 08 (Device Profiles & Client Setup) | 1 | 368s | 368s |
 
 **Recent Trend:**
-- Last 5 plans: 224s (06-02), 294s (07-01), 389s (07-02), 562s (07-03), avg: 367s
-- Trend: Phase 07 complete — platform templates and guides in ~9.4 min
+- Last 5 plans: 294s (07-01), 389s (07-02), 562s (07-03), 368s (08-01), avg: 403s
+- Trend: Phase 08 started — app password & profile generation in 6.1 min
 
 ## Accumulated Context
 
@@ -139,8 +140,15 @@ Recent decisions affecting current work:
 - [Phase 07-02]: Separate Go module for setup tool to isolate dependencies (survey, pterm, cobra) from core mail services
 - [Phase 07-03]: TrueNAS Scale 24.10+ as minimum version for Docker Compose support
 - [Phase 07-03]: Raspberry Pi 4GB RAM recommended (2GB possible with optimization)
-- [Phase 07-03]: TrueNAS Scale 24.10+ as minimum version for Docker Compose support
-- [Phase 07-03]: Raspberry Pi 4GB RAM recommended (2GB possible with optimization)
+- [08-01]: App passwords use crypto/rand with charset excluding confusing characters (0/O/1/I)
+- [08-01]: Bcrypt cost 12 for password hashing (balance of security and performance)
+- [08-01]: Stalwart backend uses $app$<device-name>$<bcrypt-hash> format
+- [08-01]: Dovecot and Maddy backends use JSON file storage with flock for concurrency
+- [08-01]: Apple profiles are UNSIGNED for v1 (per research recommendation)
+- [08-01]: .mobileconfig includes Email+CalDAV+CardDAV in ONE profile (per user decision)
+- [08-01]: CalDAV/CardDAV payloads conditionally included based on config
+- [08-01]: Autoconfig and autodiscover endpoints are public (no auth) for maximum client compatibility
+- [08-01]: Used micromdm/plist (renamed from groob/plist) for Apple plist serialization
 
 ### Pending Todos
 
@@ -155,6 +163,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Phase 7 complete (Build System & Deployment)
-Resume file: .planning/phases/07-build-system-deployment/07-VERIFICATION.md
-Next plan: Phase 8: Device Profiles & Client Setup (needs discuss → plan → execute)
+Stopped at: Completed 08-01-PLAN.md (App Password & Profile Generation Core)
+Resume file: .planning/phases/08-device-profiles-client-setup/08-01-SUMMARY.md
+Next plan: 08-02-PLAN.md (Profile Server & QR Code Generation)
