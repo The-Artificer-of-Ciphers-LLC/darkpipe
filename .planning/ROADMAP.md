@@ -114,11 +114,11 @@ Plans:
   2. Webmail interface is usable on a mobile phone screen without horizontal scrolling or broken layouts
   3. User can add a CalDAV account to iOS/macOS Calendar or Android calendar and sync events bidirectionally
   4. User can add a CardDAV account to their phone's contacts app and sync contacts bidirectionally
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 06-01: Webmail integration (Roundcube/SnappyMail selection and setup)
-- [ ] 06-02: CalDAV and CardDAV server deployment
+- [ ] 06-01-PLAN.md -- Caddy reverse proxy on cloud relay + Roundcube/SnappyMail webmail on home device with IMAP passthrough auth and mobile-responsive UI
+- [ ] 06-02-PLAN.md -- Radicale CalDAV/CardDAV for Maddy/Postfix+Dovecot, Stalwart built-in CalDAV/CardDAV, well-known auto-discovery URLs, shared family calendar/contacts, and phase integration test suite
 
 ### Phase 7: Build System & Deployment
 **Goal**: Users produce custom Docker images tailored to their chosen stack components via GitHub Actions, with pre-built images available as an alternative, running on all target platforms
@@ -184,7 +184,7 @@ Note: Phases 5 and 6 can execute in parallel after their dependencies are met. P
 | 3. Home Mail Server | 3/3 | Complete | 2026-02-09 |
 | 4. DNS & Email Authentication | 3/3 | Complete | 2026-02-14 |
 | 5. Queue & Offline Handling | 2/2 | Complete | 2026-02-14 |
-| 6. Webmail & Groupware | 0/2 | Not started | - |
+| 6. Webmail & Groupware | 0/2 | Planned | - |
 | 7. Build System & Deployment | 0/3 | Not started | - |
 | 8. Device Profiles & Client Setup | 0/3 | Not started | - |
 | 9. Monitoring & Observability | 0/2 | Not started | - |
