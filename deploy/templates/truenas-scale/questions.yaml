@@ -1,0 +1,151 @@
+# TrueNAS Scale Custom App Configuration Questions
+# These questions create a form-based UI for configuring DarkPipe
+
+questions:
+  # Basic Configuration
+  - variable: mail_domain
+    label: "Mail Domain"
+    description: "Primary mail domain (e.g., example.com). Must have MX records pointing to your relay server."
+    type: string
+    required: true
+    default: "example.com"
+    group: "Basic Configuration"
+
+  - variable: relay_hostname
+    label: "Cloud Relay Hostname"
+    description: "Hostname of your cloud relay server (e.g., relay.example.com). Must have port 25 open for inbound SMTP."
+    type: string
+    required: true
+    default: "relay.example.com"
+    group: "Basic Configuration"
+
+  - variable: mail_hostname
+    label: "Mail Server Hostname"
+    description: "Hostname of your home mail server (e.g., mail.example.com). Used for self-signed TLS certificates."
+    type: string
+    required: true
+    default: "mail.example.com"
+    group: "Basic Configuration"
+
+  - variable: admin_email
+    label: "Admin Email Address"
+    description: "Administrator email address (e.g., admin@example.com). Used for Let's Encrypt notifications and initial admin account."
+    type: string
+    required: true
+    default: "admin@example.com"
+    group: "Basic Configuration"
+
+  - variable: admin_password
+    label: "Admin Password"
+    description: "Administrator password for mail server and webmail. CHANGE THIS from the default!"
+    type: password
+    required: true
+    default: "changeme"
+    group: "Basic Configuration"
+
+  # Component Selection
+  - variable: mail_server
+    label: "Mail Server"
+    description: "Choose mail server software. Stalwart is modern with built-in calendar. Maddy is minimal. Postfix+Dovecot is battle-tested."
+    type: enum
+    required: true
+    default: "stalwart"
+    options:
+      - value: "stalwart"
+        label: "Stalwart (recommended - modern, built-in CalDAV/CardDAV)"
+      - value: "maddy"
+        label: "Maddy (minimal, Go-based)"
+      - value: "postfix-dovecot"
+        label: "Postfix+Dovecot (traditional, battle-tested)"
+    group: "Component Selection"
+
+  - variable: webmail
+    label: "Webmail Client"
+    description: "Choose webmail interface. SnappyMail is faster and lighter. Roundcube is more feature-rich."
+    type: enum
+    required: false
+    default: "snappymail"
+    options:
+      - value: "none"
+        label: "None (use desktop mail client only)"
+      - value: "snappymail"
+        label: "SnappyMail (recommended - lightweight, fast)"
+      - value: "roundcube"
+        label: "Roundcube (traditional, feature-rich)"
+    group: "Component Selection"
+
+  - variable: calendar
+    label: "Calendar/Contacts Server"
+    description: "CalDAV and CardDAV support. Builtin only works with Stalwart. Radicale is standalone for Maddy/Postfix+Dovecot."
+    type: enum
+    required: false
+    default: "builtin"
+    options:
+      - value: "none"
+        label: "None (no calendar/contacts sync)"
+      - value: "builtin"
+        label: "Built-in (only for Stalwart mail server)"
+      - value: "radicale"
+        label: "Radicale (standalone CalDAV/CardDAV server)"
+    group: "Component Selection"
+
+  # Transport Layer
+  - variable: transport
+    label: "Transport Protocol"
+    description: "WireGuard recommended for NAT traversal without port forwarding. mTLS requires static IP or DDNS."
+    type: enum
+    required: true
+    default: "wireguard"
+    options:
+      - value: "wireguard"
+        label: "WireGuard (recommended - works behind NAT)"
+      - value: "mtls"
+        label: "mTLS (requires static IP or DDNS)"
+    group: "Transport Layer"
+
+  # Storage Configuration
+  - variable: storage_path
+    label: "Storage Path"
+    description: "Host path for persistent mail data. Should be on a pool dataset (e.g., /mnt/pool/apps/darkpipe)."
+    type: hostpath
+    required: true
+    default: "/mnt/pool/apps/darkpipe"
+    group: "Storage Configuration"
+
+  # Advanced Options
+  - variable: enable_queue
+    label: "Enable Message Queue"
+    description: "Queue messages when home device is offline. Recommended for reliability."
+    type: boolean
+    required: false
+    default: true
+    group: "Advanced Options"
+
+  - variable: max_message_size
+    label: "Maximum Message Size (bytes)"
+    description: "Maximum email size in bytes. Default is 50MB (52428800 bytes)."
+    type: int
+    required: false
+    default: 52428800
+    group: "Advanced Options"
+
+  - variable: enable_webhook
+    label: "Enable Webhook Notifications"
+    description: "Send notifications on certificate errors, queue overflows, etc."
+    type: boolean
+    required: false
+    default: false
+    group: "Advanced Options"
+
+  - variable: webhook_url
+    label: "Webhook URL"
+    description: "URL to send webhook notifications (Discord, Slack, etc.)."
+    type: string
+    required: false
+    default: ""
+    group: "Advanced Options"
+    show_if: "enable_webhook=true"
+
+# Note: TrueNAS Scale <24.10 (pre-Electric Eel) uses Kubernetes backend, not Docker Compose.
+# This template is designed for TrueNAS Scale 24.10+ (Electric Eel) with native Docker Compose support.
+# For older versions, please upgrade to 24.10+ or use the manual Docker Compose deployment guide.

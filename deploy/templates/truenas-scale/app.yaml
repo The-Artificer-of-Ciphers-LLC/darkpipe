@@ -1,0 +1,213 @@
+app_version: "1.0.0"
+name: "darkpipe"
+version: "1.0.0"
+train: "community"
+title: "DarkPipe - Self-Hosted Email"
+description: "Cloud-fronted, personal-device-backed email sovereignty. DarkPipe receives mail via a cloud relay and delivers it to your home device over an encrypted WireGuard tunnel, ensuring your email lives on your hardware while remaining fully functional from the outside."
+home: "https://github.com/trek-e/darkpipe"
+sources:
+  - "https://github.com/trek-e/darkpipe"
+icon_url: ""
+categories:
+  - "networking"
+  - "productivity"
+
+# DarkPipe requires Docker Compose-based deployment
+# TrueNAS Scale 24.10+ (Electric Eel) supports Docker Compose natively
+# For older versions, see the deployment guide
+
+services:
+  # Cloud relay service (run this on a VPS with port 25 open)
+  cloud-relay:
+    image: ghcr.io/trek-e/darkpipe/cloud-relay:latest
+    container_name: darkpipe-relay
+    ports:
+      - "25:25"
+      - "80:80"
+      - "443:443"
+    environment:
+      RELAY_HOSTNAME: "{{ .Values.relay_hostname }}"
+      RELAY_DOMAIN: "{{ .Values.mail_domain }}"
+      RELAY_LISTEN_ADDR: "127.0.0.1:10025"
+      RELAY_TRANSPORT: "{{ .Values.transport }}"
+      RELAY_HOME_ADDR: "10.8.0.2:25"
+      RELAY_MAX_MESSAGE_BYTES: "52428800"
+      RELAY_QUEUE_ENABLED: "true"
+      RELAY_EPHEMERAL_CHECK_INTERVAL: "60"
+      # TLS and certificates
+      CERTBOT_EMAIL_FILE: "/run/secrets/certbot_email"
+      # Webhook notifications (optional)
+      RELAY_WEBHOOK_URL_FILE: "/run/secrets/relay_webhook_url"
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - "/dev/net/tun"
+    volumes:
+      - type: volume
+        source: postfix-queue
+        target: /var/spool/postfix
+      - type: volume
+        source: certbot-etc
+        target: /etc/letsencrypt
+      - type: volume
+        source: queue-data
+        target: /data
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+
+  # Home mail server (choose via mail_server parameter)
+  mail-server:
+    image: "ghcr.io/trek-e/darkpipe/home-{{ .Values.mail_server }}:latest"
+    container_name: darkpipe-mailserver
+    ports:
+      - "25:25"
+      - "587:587"
+      - "993:993"
+      - "{{ if eq .Values.mail_server \"stalwart\" }}8080:8080{{ end }}"
+    environment:
+      MAIL_DOMAIN: "{{ .Values.mail_domain }}"
+      MAIL_HOSTNAME: "{{ .Values.mail_hostname }}"
+      ADMIN_EMAIL: "{{ .Values.admin_email }}"
+      # Admin password via environment variable (TrueNAS <24.10 may not support Docker secrets)
+      # For better security on 24.10+, use Docker secrets in Advanced setup
+      ADMIN_PASSWORD: "{{ .Values.admin_password }}"
+      DKIM_KEY_FILE: "/run/secrets/dkim_private_key"
+    volumes:
+      - type: volume
+        source: mail-data
+        target: /opt/stalwart-mail/data
+      - type: volume
+        source: mail-config
+        target: /config
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  # Webmail (optional, controlled by webmail parameter)
+  webmail:
+    image: "{{ if eq .Values.webmail \"roundcube\" }}roundcube/roundcubemail:1.6.13{{ else if eq .Values.webmail \"snappymail\" }}djmaze/snappymail:2.38.2{{ else }}busybox{{ end }}"
+    container_name: darkpipe-webmail
+    ports:
+      - "{{ if eq .Values.webmail \"snappymail\" }}8080:8888{{ else }}8080:80{{ end }}"
+    environment:
+      ROUNDCUBEMAIL_DB_TYPE: "{{ if eq .Values.webmail \"roundcube\" }}sqlite{{ end }}"
+      ROUNDCUBEMAIL_UPLOAD_MAX_FILESIZE: "25M"
+      UPLOAD_MAX_SIZE: "25M"
+      LOG_TO_STDOUT: "true"
+      MEMORY_LIMIT: "128M"
+    volumes:
+      - type: volume
+        source: webmail-data
+        target: "{{ if eq .Values.webmail \"roundcube\" }}/var/roundcube/db{{ else }}/var/lib/snappymail{{ end }}"
+    extra_hosts:
+      - "mail-server:host-gateway"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: "{{ if eq .Values.webmail \"roundcube\" }}256M{{ else }}128M{{ end }}"
+    profiles:
+      - "{{ if ne .Values.webmail \"none\" }}default{{ else }}disabled{{ end }}"
+
+  # CalDAV/CardDAV (Radicale, only when mail_server is not stalwart)
+  radicale:
+    image: tomsquest/docker-radicale:3.6.0
+    container_name: darkpipe-radicale
+    ports:
+      - "5232:5232"
+    volumes:
+      - type: volume
+        source: radicale-data
+        target: /data/collections
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    profiles:
+      - "{{ if eq .Values.calendar \"radicale\" }}default{{ else }}disabled{{ end }}"
+
+  # Rspamd spam filter (always included)
+  rspamd:
+    image: rspamd/rspamd:latest
+    container_name: darkpipe-rspamd
+    ports:
+      - "11334:11334"
+    volumes:
+      - type: volume
+        source: rspamd-data
+        target: /var/lib/rspamd
+    depends_on:
+      - redis
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  # Redis backend for Rspamd (always included)
+  redis:
+    image: redis:alpine
+    container_name: darkpipe-redis
+    volumes:
+      - type: volume
+        source: redis-data
+        target: /data
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+
+  # Caddy reverse proxy (always included)
+  caddy:
+    image: caddy:2-alpine
+    container_name: darkpipe-caddy
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      WEBMAIL_DOMAINS: "mail.{{ .Values.mail_domain }}"
+    volumes:
+      - type: volume
+        source: caddy-data
+        target: /data
+      - type: volume
+        source: caddy-config
+        target: /config
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+volumes:
+  postfix-queue:
+  certbot-etc:
+  queue-data:
+  mail-data:
+  mail-config:
+  webmail-data:
+  radicale-data:
+  rspamd-data:
+  redis-data:
+  caddy-data:
+  caddy-config:
+
+# Note: TrueNAS Scale 24.10+ supports Docker secrets natively
+# For older versions, secrets must be passed as environment variables
+secrets:
+  certbot_email:
+    external: true
+  relay_webhook_url:
+    external: true
+  dkim_private_key:
+    external: true

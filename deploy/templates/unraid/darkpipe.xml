@@ -1,0 +1,126 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>DarkPipe-CloudRelay</Name>
+  <Repository>ghcr.io/trek-e/darkpipe/cloud-relay:latest</Repository>
+  <Registry>https://ghcr.io/trek-e/darkpipe</Registry>
+  <Network>bridge</Network>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/trek-e/darkpipe/discussions</Support>
+  <Project>https://github.com/trek-e/darkpipe</Project>
+  <Overview>DarkPipe - Self-hosted email sovereignty. Cloud relay receives mail via SMTP and forwards it to your home device over an encrypted WireGuard tunnel. Your email lives on your hardware, encrypted in transit, never stored on someone else's server.&#xD;
+&#xD;
+NOTE: This template covers the cloud-relay component only (for VPS deployment). For the complete home mail server stack, use the Docker Compose plugin with the full DarkPipe compose file. See: https://github.com/trek-e/darkpipe/tree/master/deploy/platform-guides/unraid.md</Overview>
+  <Category>Network:Email ProductivityTools:</Category>
+  <WebUI></WebUI>
+  <TemplateURL>https://raw.githubusercontent.com/trek-e/darkpipe/master/deploy/templates/unraid/darkpipe.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/trek-e/darkpipe/master/docs/icon.png</Icon>
+  <ExtraParams>--cap-add=NET_ADMIN --device=/dev/net/tun</ExtraParams>
+  <DateInstalled></DateInstalled>
+  <Description>DarkPipe - Self-hosted email sovereignty. Cloud relay receives mail via SMTP and forwards it to your home device over an encrypted WireGuard tunnel.</Description>
+  <Networking>
+    <Mode>bridge</Mode>
+    <Publish>
+      <Port>
+        <HostPort>25</HostPort>
+        <ContainerPort>25</ContainerPort>
+        <Protocol>tcp</Protocol>
+      </Port>
+      <Port>
+        <HostPort>80</HostPort>
+        <ContainerPort>80</ContainerPort>
+        <Protocol>tcp</Protocol>
+      </Port>
+      <Port>
+        <HostPort>443</HostPort>
+        <ContainerPort>443</ContainerPort>
+        <Protocol>tcp</Protocol>
+      </Port>
+    </Publish>
+  </Networking>
+  <Data>
+    <Volume>
+      <HostDir>/mnt/user/appdata/darkpipe/postfix-queue</HostDir>
+      <ContainerDir>/var/spool/postfix</ContainerDir>
+      <Mode>rw</Mode>
+    </Volume>
+    <Volume>
+      <HostDir>/mnt/user/appdata/darkpipe/certbot</HostDir>
+      <ContainerDir>/etc/letsencrypt</ContainerDir>
+      <Mode>rw</Mode>
+    </Volume>
+    <Volume>
+      <HostDir>/mnt/user/appdata/darkpipe/queue</HostDir>
+      <ContainerDir>/data</ContainerDir>
+      <Mode>rw</Mode>
+    </Volume>
+    <Volume>
+      <HostDir>/mnt/user/appdata/darkpipe/config</HostDir>
+      <ContainerDir>/config</ContainerDir>
+      <Mode>rw</Mode>
+    </Volume>
+  </Data>
+  <Environment>
+    <Variable>
+      <Value>relay.example.com</Value>
+      <Name>RELAY_HOSTNAME</Name>
+      <Mode/>
+    </Variable>
+    <Variable>
+      <Value>example.com</Value>
+      <Name>RELAY_DOMAIN</Name>
+      <Mode/>
+    </Variable>
+    <Variable>
+      <Value>127.0.0.1:10025</Value>
+      <Name>RELAY_LISTEN_ADDR</Name>
+      <Mode/>
+    </Variable>
+    <Variable>
+      <Value>wireguard</Value>
+      <Name>RELAY_TRANSPORT</Name>
+      <Mode/>
+    </Variable>
+    <Variable>
+      <Value>10.8.0.2:25</Value>
+      <Name>RELAY_HOME_ADDR</Name>
+      <Mode/>
+    </Variable>
+    <Variable>
+      <Value>52428800</Value>
+      <Name>RELAY_MAX_MESSAGE_BYTES</Name>
+      <Mode/>
+    </Variable>
+    <Variable>
+      <Value>true</Value>
+      <Name>RELAY_QUEUE_ENABLED</Name>
+      <Mode/>
+    </Variable>
+    <Variable>
+      <Value>60</Value>
+      <Name>RELAY_EPHEMERAL_CHECK_INTERVAL</Name>
+      <Mode/>
+    </Variable>
+    <Variable>
+      <Value>admin@example.com</Value>
+      <Name>CERTBOT_EMAIL</Name>
+      <Mode/>
+    </Variable>
+  </Environment>
+  <Labels/>
+  <Config Name="SMTP Port" Target="25" Default="25" Mode="tcp" Description="SMTP inbound port (must be 25 for mail delivery)" Type="Port" Display="always" Required="true" Mask="false">25</Config>
+  <Config Name="HTTP Port" Target="80" Default="80" Mode="tcp" Description="HTTP port for Let's Encrypt challenges" Type="Port" Display="always" Required="true" Mask="false">80</Config>
+  <Config Name="HTTPS Port" Target="443" Default="443" Mode="tcp" Description="HTTPS port for webmail reverse proxy" Type="Port" Display="always" Required="false" Mask="false">443</Config>
+  <Config Name="Postfix Queue" Target="/var/spool/postfix" Default="/mnt/user/appdata/darkpipe/postfix-queue" Mode="rw" Description="Persistent Postfix mail queue" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/darkpipe/postfix-queue</Config>
+  <Config Name="Let's Encrypt Certificates" Target="/etc/letsencrypt" Default="/mnt/user/appdata/darkpipe/certbot" Mode="rw" Description="Let's Encrypt certificates" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/darkpipe/certbot</Config>
+  <Config Name="Queue Data" Target="/data" Default="/mnt/user/appdata/darkpipe/queue" Mode="rw" Description="Message queue and encryption keys" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/darkpipe/queue</Config>
+  <Config Name="Configuration" Target="/config" Default="/mnt/user/appdata/darkpipe/config" Mode="rw" Description="DarkPipe configuration files" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/darkpipe/config</Config>
+  <Config Name="Relay Hostname" Target="RELAY_HOSTNAME" Default="relay.example.com" Description="Cloud relay hostname (must have port 25 open)" Type="Variable" Display="always" Required="true" Mask="false">relay.example.com</Config>
+  <Config Name="Mail Domain" Target="RELAY_DOMAIN" Default="example.com" Description="Primary mail domain" Type="Variable" Display="always" Required="true" Mask="false">example.com</Config>
+  <Config Name="Relay Listen Address" Target="RELAY_LISTEN_ADDR" Default="127.0.0.1:10025" Description="Address for relay daemon to listen on" Type="Variable" Display="advanced" Required="true" Mask="false">127.0.0.1:10025</Config>
+  <Config Name="Transport Protocol" Target="RELAY_TRANSPORT" Default="wireguard" Description="Transport protocol (wireguard or mtls)" Type="Variable" Display="always" Required="true" Mask="false">wireguard</Config>
+  <Config Name="Home Device Address" Target="RELAY_HOME_ADDR" Default="10.8.0.2:25" Description="WireGuard IP address of home device" Type="Variable" Display="always" Required="true" Mask="false">10.8.0.2:25</Config>
+  <Config Name="Max Message Size" Target="RELAY_MAX_MESSAGE_BYTES" Default="52428800" Description="Maximum message size in bytes (default: 50MB)" Type="Variable" Display="advanced" Required="false" Mask="false">52428800</Config>
+  <Config Name="Enable Queue" Target="RELAY_QUEUE_ENABLED" Default="true" Description="Enable message queueing when home device is offline" Type="Variable" Display="always" Required="false" Mask="false">true</Config>
+  <Config Name="Ephemeral Check Interval" Target="RELAY_EPHEMERAL_CHECK_INTERVAL" Default="60" Description="Interval in seconds to check ephemeral storage" Type="Variable" Display="advanced" Required="false" Mask="false">60</Config>
+  <Config Name="Certbot Email" Target="CERTBOT_EMAIL" Default="admin@example.com" Description="Email for Let's Encrypt certificate notifications" Type="Variable" Display="always" Required="true" Mask="false">admin@example.com</Config>
+</Container>
