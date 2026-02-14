@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 ## Current Position
 
 Phase: 8 of 9 (Device Profiles & Client Setup)
-Plan: 1 of 3 complete
-Status: Phase 8 in progress — App password & profile generation core complete
-Last activity: 2026-02-14 -- Completed 08-01-PLAN.md (App Password & Profile Generation Core)
+Plan: 2 of 3 complete
+Status: Phase 8 in progress — Profile server & QR code generation complete
+Last activity: 2026-02-14 -- Completed 08-02-PLAN.md (Profile Server & QR Code Generation)
 
-Progress: [█████████░] 81%
+Progress: [█████████░] 85%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 21
-- Average duration: 5.5 minutes
-- Total execution time: 2.0 hours
+- Total plans completed: 22
+- Average duration: 5.7 minutes
+- Total execution time: 2.1 hours
 
 **By Phase:**
 
@@ -34,11 +34,11 @@ Progress: [█████████░] 81%
 | 05 (Queue & Offline) | 2 | 1335s | 668s |
 | 06 (Webmail & Groupware) | 2 | 353s | 177s |
 | 07 (Build System & Deployment) | 3 | 1245s | 415s |
-| 08 (Device Profiles & Client Setup) | 1 | 368s | 368s |
+| 08 (Device Profiles & Client Setup) | 2 | 894s | 447s |
 
 **Recent Trend:**
-- Last 5 plans: 294s (07-01), 389s (07-02), 562s (07-03), 368s (08-01), avg: 403s
-- Trend: Phase 08 started — app password & profile generation in 6.1 min
+- Last 5 plans: 389s (07-02), 562s (07-03), 368s (08-01), 526s (08-02), avg: 461s
+- Trend: Phase 08 progressing — profile server & QR code generation in 8.8 min
 
 ## Accumulated Context
 
@@ -149,6 +149,12 @@ Recent decisions affecting current work:
 - [08-01]: CalDAV/CardDAV payloads conditionally included based on config
 - [08-01]: Autoconfig and autodiscover endpoints are public (no auth) for maximum client compatibility
 - [08-01]: Used micromdm/plist (renamed from groob/plist) for Apple plist serialization
+- [08-02]: QR codes encode single-use URLs (not inline settings) for revocability and auditability
+- [08-02]: Token expiry 15 minutes (sufficient for mobile onboarding, short enough to limit exposure)
+- [08-02]: Single-use enforcement: token marked as used IMMEDIATELY on validation (prevents race conditions)
+- [08-02]: Profile server on port 8090 (separate from webmail on 8080 for service isolation)
+- [08-02]: SRV records include _imap with target '.' (unavailable) per RFC 2782
+- [08-02]: Caddy handle directives placed BEFORE default webmail reverse_proxy (first match wins)
 
 ### Pending Todos
 
@@ -163,6 +169,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 08-01-PLAN.md (App Password & Profile Generation Core)
-Resume file: .planning/phases/08-device-profiles-client-setup/08-01-SUMMARY.md
-Next plan: 08-02-PLAN.md (Profile Server & QR Code Generation)
+Stopped at: Completed 08-02-PLAN.md (Profile Server & QR Code Generation)
+Resume file: .planning/phases/08-device-profiles-client-setup/08-02-SUMMARY.md
+Next plan: 08-03-PLAN.md (Webmail Integration)
