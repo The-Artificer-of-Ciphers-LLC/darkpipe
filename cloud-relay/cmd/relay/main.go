@@ -15,6 +15,7 @@ import (
 	"github.com/darkpipe/darkpipe/cloud-relay/relay/config"
 	"github.com/darkpipe/darkpipe/cloud-relay/relay/forward"
 	"github.com/darkpipe/darkpipe/cloud-relay/relay/notify"
+	"github.com/darkpipe/darkpipe/cloud-relay/relay/queue"
 	"github.com/darkpipe/darkpipe/cloud-relay/relay/smtp"
 	"github.com/darkpipe/darkpipe/cloud-relay/relay/tls"
 )
@@ -64,10 +65,10 @@ func main() {
 	}
 
 	// Create appropriate forwarder based on transport type
-	var forwarder forward.Forwarder
+	var transportForwarder forward.Forwarder
 	if cfg.TransportType == "mtls" {
 		log.Println("Initializing mTLS forwarder...")
-		forwarder, err = forward.NewMTLSForwarder(
+		transportForwarder, err = forward.NewMTLSForwarder(
 			cfg.CACertPath,
 			cfg.ClientCertPath,
 			cfg.ClientKeyPath,
@@ -78,12 +79,44 @@ func main() {
 		}
 	} else {
 		log.Println("Initializing WireGuard forwarder...")
-		forwarder = forward.NewWireGuardForwarder(cfg.HomeDeviceAddr)
+		transportForwarder = forward.NewWireGuardForwarder(cfg.HomeDeviceAddr)
 	}
-	defer forwarder.Close()
+	defer transportForwarder.Close()
+
+	// Initialize queue if enabled
+	var activeForwarder forward.Forwarder
+	var processorCancel context.CancelFunc
+	if cfg.QueueEnabled {
+		log.Println("Initializing encrypted message queue...")
+		queueCfg := queue.QueueConfig{
+			KeyPath:      cfg.QueueKeyPath,
+			MaxRAMBytes:  cfg.QueueMaxRAMBytes,
+			MaxMessages:  cfg.QueueMaxMessages,
+			TTLHours:     cfg.QueueTTLHours,
+			SnapshotPath: cfg.QueueSnapshotPath,
+		}
+		msgQueue, err := queue.NewMessageQueue(queueCfg)
+		if err != nil {
+			log.Fatalf("Failed to initialize message queue: %v", err)
+		}
+
+		queuedFwd := forward.NewQueuedForwarder(transportForwarder, msgQueue, true)
+		activeForwarder = queuedFwd
+
+		// Start background queue processor
+		processorCtx, cancel := context.WithCancel(context.Background())
+		processorCancel = cancel
+		go msgQueue.StartProcessor(processorCtx, transportForwarder, 30*time.Second)
+
+		log.Printf("Queue enabled: max_ram=%dMB max_messages=%d ttl=%dh",
+			cfg.QueueMaxRAMBytes/(1024*1024), cfg.QueueMaxMessages, cfg.QueueTTLHours)
+	} else {
+		log.Println("Queue disabled: mail will bounce when home device is offline")
+		activeForwarder = transportForwarder
+	}
 
 	// Create and start SMTP server
-	server := smtp.NewServer(forwarder, cfg)
+	server := smtp.NewServer(activeForwarder, cfg)
 	log.Printf("Relay daemon listening on %s (forwarding to %s via %s)", cfg.ListenAddr, cfg.HomeDeviceAddr, cfg.TransportType)
 
 	// Handle graceful shutdown
@@ -95,6 +128,11 @@ func main() {
 		log.Println("Shutdown signal received, stopping server...")
 		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer shutdownCancel()
+
+		// Stop queue processor if running
+		if processorCancel != nil {
+			processorCancel()
+		}
 
 		if err := server.Shutdown(shutdownCtx); err != nil {
 			log.Printf("Server shutdown error: %v", err)

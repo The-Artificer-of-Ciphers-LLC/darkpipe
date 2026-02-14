@@ -227,3 +227,82 @@ func TestGetEnvBool_ReturnsDefaultOnInvalid(t *testing.T) {
 		t.Errorf("getEnvBool = %v, want default %v", got, true)
 	}
 }
+
+func TestLoadFromEnv_QueueDefaults(t *testing.T) {
+	t.Setenv("RELAY_HOME_ADDR", "10.8.0.2:25")
+
+	cfg, err := LoadFromEnv()
+	if err != nil {
+		t.Fatalf("LoadFromEnv: %v", err)
+	}
+
+	// Verify queue defaults
+	if !cfg.QueueEnabled {
+		t.Errorf("QueueEnabled = false, want default true")
+	}
+	if cfg.QueueKeyPath != "/data/queue-keys/identity" {
+		t.Errorf("QueueKeyPath = %q, want default %q", cfg.QueueKeyPath, "/data/queue-keys/identity")
+	}
+	if cfg.QueueMaxRAMBytes != 200*1024*1024 {
+		t.Errorf("QueueMaxRAMBytes = %d, want default %d", cfg.QueueMaxRAMBytes, 200*1024*1024)
+	}
+	if cfg.QueueMaxMessages != 10000 {
+		t.Errorf("QueueMaxMessages = %d, want default %d", cfg.QueueMaxMessages, 10000)
+	}
+	if cfg.QueueTTLHours != 168 {
+		t.Errorf("QueueTTLHours = %d, want default %d", cfg.QueueTTLHours, 168)
+	}
+	if cfg.QueueSnapshotPath != "/data/queue-state/snapshot.json" {
+		t.Errorf("QueueSnapshotPath = %q, want default %q", cfg.QueueSnapshotPath, "/data/queue-state/snapshot.json")
+	}
+}
+
+func TestLoadFromEnv_QueueCustom(t *testing.T) {
+	t.Setenv("RELAY_HOME_ADDR", "10.8.0.2:25")
+	t.Setenv("RELAY_QUEUE_ENABLED", "true")
+	t.Setenv("RELAY_QUEUE_KEY_PATH", "/custom/keys/identity")
+	t.Setenv("RELAY_QUEUE_MAX_RAM", "104857600")     // 100MB
+	t.Setenv("RELAY_QUEUE_MAX_MESSAGES", "5000")
+	t.Setenv("RELAY_QUEUE_TTL_HOURS", "72")          // 3 days
+	t.Setenv("RELAY_QUEUE_SNAPSHOT_PATH", "/custom/snapshot.json")
+
+	cfg, err := LoadFromEnv()
+	if err != nil {
+		t.Fatalf("LoadFromEnv: %v", err)
+	}
+
+	// Verify custom queue values
+	if !cfg.QueueEnabled {
+		t.Errorf("QueueEnabled = false, want true")
+	}
+	if cfg.QueueKeyPath != "/custom/keys/identity" {
+		t.Errorf("QueueKeyPath = %q, want %q", cfg.QueueKeyPath, "/custom/keys/identity")
+	}
+	if cfg.QueueMaxRAMBytes != 104857600 {
+		t.Errorf("QueueMaxRAMBytes = %d, want %d", cfg.QueueMaxRAMBytes, 104857600)
+	}
+	if cfg.QueueMaxMessages != 5000 {
+		t.Errorf("QueueMaxMessages = %d, want %d", cfg.QueueMaxMessages, 5000)
+	}
+	if cfg.QueueTTLHours != 72 {
+		t.Errorf("QueueTTLHours = %d, want %d", cfg.QueueTTLHours, 72)
+	}
+	if cfg.QueueSnapshotPath != "/custom/snapshot.json" {
+		t.Errorf("QueueSnapshotPath = %q, want %q", cfg.QueueSnapshotPath, "/custom/snapshot.json")
+	}
+}
+
+func TestLoadFromEnv_QueueDisabled(t *testing.T) {
+	t.Setenv("RELAY_HOME_ADDR", "10.8.0.2:25")
+	t.Setenv("RELAY_QUEUE_ENABLED", "false")
+
+	cfg, err := LoadFromEnv()
+	if err != nil {
+		t.Fatalf("LoadFromEnv: %v", err)
+	}
+
+	// Verify queue is disabled
+	if cfg.QueueEnabled {
+		t.Errorf("QueueEnabled = true, want false")
+	}
+}

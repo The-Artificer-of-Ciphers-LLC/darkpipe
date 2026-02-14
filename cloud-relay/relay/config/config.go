@@ -27,6 +27,14 @@ type Config struct {
 	// TLS monitoring and notifications
 	StrictModeEnabled bool
 	WebhookURL        string
+
+	// Queue configuration (QUEUE-01, QUEUE-02, QUEUE-03)
+	QueueEnabled      bool   // QUEUE-03: false = reject when offline
+	QueueKeyPath      string // Path to age identity file for encryption
+	QueueMaxRAMBytes  int64  // Max RAM for queue (default 200MB)
+	QueueMaxMessages  int    // Max messages in queue (default 10000)
+	QueueTTLHours     int    // Max age before purge (default 168 = 7 days)
+	QueueSnapshotPath string // Path for queue metadata snapshots
 }
 
 // LoadFromEnv loads configuration from environment variables with sensible defaults.
@@ -43,6 +51,12 @@ func LoadFromEnv() (*Config, error) {
 		WriteTimeout:      30 * time.Second,
 		StrictModeEnabled: getEnvBool("RELAY_STRICT_MODE", false),
 		WebhookURL:        getEnv("RELAY_WEBHOOK_URL", ""),
+		QueueEnabled:      getEnvBool("RELAY_QUEUE_ENABLED", true),                             // Enabled by default
+		QueueKeyPath:      getEnv("RELAY_QUEUE_KEY_PATH", "/data/queue-keys/identity"),         // Default path
+		QueueMaxRAMBytes:  getEnvInt64("RELAY_QUEUE_MAX_RAM", 200*1024*1024),                   // 200MB
+		QueueMaxMessages:  int(getEnvInt64("RELAY_QUEUE_MAX_MESSAGES", 10000)),                 // 10k messages
+		QueueTTLHours:     int(getEnvInt64("RELAY_QUEUE_TTL_HOURS", 168)),                      // 7 days
+		QueueSnapshotPath: getEnv("RELAY_QUEUE_SNAPSHOT_PATH", "/data/queue-state/snapshot.json"), // Default path
 	}
 
 	// Validate based on transport type
