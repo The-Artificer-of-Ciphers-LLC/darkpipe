@@ -29,8 +29,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **CERT-01**: Let's Encrypt certificates via Certbot for public-facing TLS
 - [x] **CERT-02**: Internal CA (step-ca) for relay↔home transport certificates
-- [ ] **CERT-03**: Configurable certificate rotation (30/60/90 days)
-- [ ] **CERT-04**: Certificate expiry monitoring with alerts
+- [x] **CERT-03**: Configurable certificate rotation (30/60/90 days)
+- [x] **CERT-04**: Certificate expiry monitoring with alerts
 
 ### Email Authentication & Deliverability
 
@@ -83,9 +83,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Monitoring
 
-- [ ] **MON-01**: Mail queue health monitoring
-- [ ] **MON-02**: Mail delivery status visibility
-- [ ] **MON-03**: Cloud relay container health checks
+- [x] **MON-01**: Mail queue health monitoring
+- [x] **MON-02**: Mail delivery status visibility
+- [x] **MON-03**: Cloud relay container health checks
 
 ### Deployment & UX
 
