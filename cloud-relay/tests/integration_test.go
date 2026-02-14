@@ -5,6 +5,9 @@
 package tests
 
 import (
+	"bytes"
+	"context"
+	"errors"
 	"net"
 	"net/smtp"
 	"strings"
@@ -13,11 +16,12 @@ import (
 
 	"github.com/darkpipe/darkpipe/cloud-relay/relay/config"
 	"github.com/darkpipe/darkpipe/cloud-relay/relay/forward"
+	"github.com/darkpipe/darkpipe/cloud-relay/relay/queue"
 	smtpserver "github.com/darkpipe/darkpipe/cloud-relay/relay/smtp"
 )
 
 // Helper function to start a test SMTP server
-func startTestServer(t *testing.T, mockFwd *forward.MockForwarder) string {
+func startTestServer(t *testing.T, fwd forward.Forwarder) string {
 	t.Helper()
 
 	cfg := &config.Config{
@@ -27,7 +31,7 @@ func startTestServer(t *testing.T, mockFwd *forward.MockForwarder) string {
 		WriteTimeout:    10 * time.Second,
 	}
 
-	server := smtpserver.NewServer(mockFwd, cfg)
+	server := smtpserver.NewServer(fwd, cfg)
 
 	// Create listener to get actual port
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
@@ -265,5 +269,337 @@ func TestIntegration_EphemeralBehavior(t *testing.T) {
 
 	if strings.Contains(calls[1].Data, "First message") {
 		t.Error("second call data contains first message (not ephemeral)")
+	}
+}
+
+// Phase 5 integration tests - Queue & Offline Handling
+
+func TestIntegration_QueueOnOffline(t *testing.T) {
+	// Success Criterion 1: With queuing enabled and home device offline,
+	// inbound mail queues encrypted and delivers when reconnected.
+	t.Parallel()
+
+	// Create temp directory for queue keys
+	tmpDir := t.TempDir()
+	keyPath := tmpDir + "/identity"
+
+	// Create MockForwarder configured to fail (offline)
+	mockFwd := forward.NewMockForwarder()
+	mockFwd.ForwardError = errors.New("home device offline")
+
+	// Create message queue
+	queueCfg := queue.QueueConfig{
+		KeyPath:     keyPath,
+		MaxRAMBytes: 1024 * 1024, // 1MB
+		MaxMessages: 10,
+		TTLHours:    1,
+	}
+	msgQueue, err := queue.NewMessageQueue(queueCfg)
+	if err != nil {
+		t.Fatalf("NewMessageQueue: %v", err)
+	}
+	defer msgQueue.Close()
+
+	// Create QueuedForwarder with queue enabled
+	queuedFwd := forward.NewQueuedForwarder(mockFwd, msgQueue, true)
+
+	// Send message (should be queued since transport fails)
+	from := "sender@example.com"
+	to := []string{"recipient@example.com"}
+	message := []byte("Message-ID: <test-queue-1@example.com>\r\nSubject: Queue Test\r\n\r\nTest message\r\n")
+
+	err = queuedFwd.Forward(context.Background(), from, to, bytes.NewReader(message))
+	if err != nil {
+		t.Fatalf("Forward (should queue): %v", err)
+	}
+
+	// Verify MockForwarder was called and failed
+	calls := mockFwd.GetCalls()
+	if len(calls) != 1 {
+		t.Fatalf("forwarder calls = %d, want 1 (failed attempt)", len(calls))
+	}
+
+	// Verify message is queued
+	if msgQueue.Len() != 1 {
+		t.Fatalf("queue length = %d, want 1", msgQueue.Len())
+	}
+
+	// Simulate reconnect: configure MockForwarder to succeed
+	mockFwd.Reset()
+	mockFwd.ForwardError = nil
+
+	// Create a new forwarder for delivery simulation
+	successFwd := forward.NewMockForwarder()
+
+	// Process queue manually with success forwarder
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go msgQueue.StartProcessor(ctx, successFwd, 100*time.Millisecond)
+
+	// Give processor time to deliver
+	time.Sleep(500 * time.Millisecond)
+
+	// Verify queue is empty (message delivered)
+	if msgQueue.Len() != 0 {
+		t.Errorf("queue length after reconnect = %d, want 0", msgQueue.Len())
+	}
+
+	// Verify success forwarder received the message
+	deliveryCalls := successFwd.GetCalls()
+	if len(deliveryCalls) != 1 {
+		t.Fatalf("delivery calls = %d, want 1", len(deliveryCalls))
+	}
+
+	call := deliveryCalls[0]
+	if call.From != from {
+		t.Errorf("delivered from = %q, want %q", call.From, from)
+	}
+	if len(call.To) != 1 || call.To[0] != to[0] {
+		t.Errorf("delivered to = %v, want %v", call.To, to)
+	}
+	if !strings.Contains(call.Data, "Queue Test") {
+		t.Errorf("delivered data missing subject: %s", call.Data)
+	}
+}
+
+func TestIntegration_QueueDisabledBounce(t *testing.T) {
+	// Success Criterion 3: With queuing disabled, relay returns error
+	// when home device unreachable.
+	t.Parallel()
+
+	// Create temp directory for queue keys
+	tmpDir := t.TempDir()
+	keyPath := tmpDir + "/identity"
+
+	// Create MockForwarder configured to fail (offline)
+	mockFwd := forward.NewMockForwarder()
+	mockFwd.ForwardError = errors.New("home device offline")
+
+	// Create message queue
+	queueCfg := queue.QueueConfig{
+		KeyPath:     keyPath,
+		MaxRAMBytes: 1024 * 1024,
+		MaxMessages: 10,
+		TTLHours:    1,
+	}
+	msgQueue, err := queue.NewMessageQueue(queueCfg)
+	if err != nil {
+		t.Fatalf("NewMessageQueue: %v", err)
+	}
+	defer msgQueue.Close()
+
+	// Create QueuedForwarder with queue DISABLED
+	queuedFwd := forward.NewQueuedForwarder(mockFwd, msgQueue, false)
+
+	// Send message (should return error since queue disabled)
+	from := "sender@example.com"
+	to := []string{"recipient@example.com"}
+	message := []byte("Subject: Queue Disabled Test\r\n\r\nTest message\r\n")
+
+	err = queuedFwd.Forward(context.Background(), from, to, bytes.NewReader(message))
+	if err == nil {
+		t.Fatal("Forward: expected error when queue disabled and transport fails, got nil")
+	}
+
+	// Verify error indicates offline
+	if !strings.Contains(err.Error(), "offline") {
+		t.Errorf("error = %q, want error containing 'offline'", err.Error())
+	}
+
+	// Verify nothing was queued
+	if msgQueue.Len() != 0 {
+		t.Errorf("queue length = %d, want 0 (nothing queued)", msgQueue.Len())
+	}
+}
+
+func TestIntegration_QueueEncryption(t *testing.T) {
+	// QUEUE-01 requirement: Queued messages are encrypted at rest.
+	t.Parallel()
+
+	// Create temp directory for queue keys
+	tmpDir := t.TempDir()
+	keyPath := tmpDir + "/identity"
+
+	// Create MockForwarder configured to fail (offline)
+	mockFwd := forward.NewMockForwarder()
+	mockFwd.ForwardError = errors.New("home device offline")
+
+	// Create message queue
+	queueCfg := queue.QueueConfig{
+		KeyPath:     keyPath,
+		MaxRAMBytes: 1024 * 1024,
+		MaxMessages: 10,
+		TTLHours:    1,
+	}
+	msgQueue, err := queue.NewMessageQueue(queueCfg)
+	if err != nil {
+		t.Fatalf("NewMessageQueue: %v", err)
+	}
+	defer msgQueue.Close()
+
+	// Create QueuedForwarder
+	queuedFwd := forward.NewQueuedForwarder(mockFwd, msgQueue, true)
+
+	// Send message with known plaintext
+	from := "sender@example.com"
+	to := []string{"recipient@example.com"}
+	knownPlaintext := "Hello, this is a test message with secret content"
+	message := []byte("Message-ID: <encrypt-test@example.com>\r\nSubject: Encryption Test\r\n\r\n" + knownPlaintext + "\r\n")
+
+	err = queuedFwd.Forward(context.Background(), from, to, bytes.NewReader(message))
+	if err != nil {
+		t.Fatalf("Forward: %v", err)
+	}
+
+	// Verify message is queued
+	if msgQueue.Len() != 1 {
+		t.Fatalf("queue length = %d, want 1", msgQueue.Len())
+	}
+
+	// Dequeue message to verify encryption
+	msgID := "<encrypt-test@example.com>"
+	queuedMsg, plaintext, err := msgQueue.Dequeue(msgID)
+	if err != nil {
+		t.Fatalf("Dequeue: %v", err)
+	}
+
+	// Verify EncryptedData does NOT contain plaintext
+	if queuedMsg.EncryptedData != nil && bytes.Contains(queuedMsg.EncryptedData, []byte(knownPlaintext)) {
+		t.Error("EncryptedData contains plaintext (not encrypted!)")
+	}
+
+	// Verify decrypted plaintext matches original
+	if !bytes.Contains(plaintext, []byte(knownPlaintext)) {
+		t.Errorf("decrypted plaintext missing original content: %s", plaintext)
+	}
+}
+
+func TestIntegration_QueueDedup(t *testing.T) {
+	// Verify duplicate messages with same Message-ID are deduplicated.
+	t.Parallel()
+
+	// Create temp directory for queue keys
+	tmpDir := t.TempDir()
+	keyPath := tmpDir + "/identity"
+
+	// Create MockForwarder configured to fail (offline)
+	mockFwd := forward.NewMockForwarder()
+	mockFwd.ForwardError = errors.New("home device offline")
+
+	// Create message queue
+	queueCfg := queue.QueueConfig{
+		KeyPath:     keyPath,
+		MaxRAMBytes: 1024 * 1024,
+		MaxMessages: 10,
+		TTLHours:    1,
+	}
+	msgQueue, err := queue.NewMessageQueue(queueCfg)
+	if err != nil {
+		t.Fatalf("NewMessageQueue: %v", err)
+	}
+	defer msgQueue.Close()
+
+	// Create QueuedForwarder
+	queuedFwd := forward.NewQueuedForwarder(mockFwd, msgQueue, true)
+
+	// Send first message
+	from := "sender@example.com"
+	to := []string{"recipient@example.com"}
+	messageID := "<dedup-test@example.com>"
+	message1 := []byte("Message-ID: " + messageID + "\r\nSubject: First\r\n\r\nFirst body\r\n")
+
+	err = queuedFwd.Forward(context.Background(), from, to, bytes.NewReader(message1))
+	if err != nil {
+		t.Fatalf("Forward (first): %v", err)
+	}
+
+	// Send second message with SAME Message-ID but different body
+	message2 := []byte("Message-ID: " + messageID + "\r\nSubject: Second\r\n\r\nSecond body\r\n")
+
+	err = queuedFwd.Forward(context.Background(), from, to, bytes.NewReader(message2))
+	if err != nil {
+		t.Fatalf("Forward (second): %v", err)
+	}
+
+	// Verify only one message is queued (dedup worked)
+	if msgQueue.Len() != 1 {
+		t.Errorf("queue length = %d, want 1 (second message deduplicated)", msgQueue.Len())
+	}
+}
+
+func TestIntegration_FullSMTPWithQueue(t *testing.T) {
+	// End-to-end SMTP session with queue (extends existing integration test pattern).
+	t.Parallel()
+
+	// Create temp directory for queue keys
+	tmpDir := t.TempDir()
+	keyPath := tmpDir + "/identity"
+
+	// Create MockForwarder that fails initially
+	mockFwd := forward.NewMockForwarder()
+	mockFwd.ForwardError = errors.New("home device offline")
+
+	// Create message queue
+	queueCfg := queue.QueueConfig{
+		KeyPath:     keyPath,
+		MaxRAMBytes: 1024 * 1024,
+		MaxMessages: 10,
+		TTLHours:    1,
+	}
+	msgQueue, err := queue.NewMessageQueue(queueCfg)
+	if err != nil {
+		t.Fatalf("NewMessageQueue: %v", err)
+	}
+	defer msgQueue.Close()
+
+	// Create QueuedForwarder
+	queuedFwd := forward.NewQueuedForwarder(mockFwd, msgQueue, true)
+
+	// Start SMTP server
+	serverAddr := startTestServer(t, queuedFwd)
+
+	// Send message via SMTP client
+	from := "sender@example.com"
+	to := []string{"recipient@example.com"}
+	message := []byte("Message-ID: <smtp-queue-test@example.com>\r\nSubject: SMTP Queue Test\r\n\r\nTest message via SMTP\r\n")
+
+	err = smtp.SendMail(serverAddr, nil, from, to, message)
+	if err != nil {
+		t.Fatalf("SendMail: %v", err)
+	}
+
+	// Give SMTP session time to process
+	time.Sleep(100 * time.Millisecond)
+
+	// Verify SMTP accepted (no error from client perspective)
+	// Verify queue has the message
+	if msgQueue.Len() != 1 {
+		t.Fatalf("queue length = %d, want 1 (message queued)", msgQueue.Len())
+	}
+
+	// Simulate reconnect: process queue with succeeding MockForwarder
+	successFwd := forward.NewMockForwarder()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go msgQueue.StartProcessor(ctx, successFwd, 100*time.Millisecond)
+
+	// Wait for delivery
+	time.Sleep(500 * time.Millisecond)
+
+	// Verify message delivered
+	deliveryCalls := successFwd.GetCalls()
+	if len(deliveryCalls) < 1 {
+		t.Fatalf("delivery calls = %d, want at least 1", len(deliveryCalls))
+	}
+
+	call := deliveryCalls[0]
+	if !strings.Contains(call.Data, "SMTP Queue Test") {
+		t.Errorf("delivered data missing subject: %s", call.Data)
+	}
+
+	// Verify queue is empty
+	if msgQueue.Len() != 0 {
+		t.Errorf("queue length after delivery = %d, want 0", msgQueue.Len())
 	}
 }
