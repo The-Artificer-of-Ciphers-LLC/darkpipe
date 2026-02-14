@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-08)
 
 **Core value:** Your email lives on your hardware, encrypted in transit, never stored on someone else's server -- and it still works like normal email from the outside.
-**Current focus:** Phase 5 - Queue & Offline Handling (in progress)
+**Current focus:** Phase 6 - Webmail & Groupware (next up)
 
 ## Current Position
 
-Phase: 5 of 9 (Queue & Offline Handling)
-Plan: 2 of 2 in current phase (Complete)
-Status: Complete
-Last activity: 2026-02-14 -- Completed 05-02 (S3 overflow storage + Phase 5 integration tests)
+Phase: 5 of 9 (Queue & Offline Handling) ✓ Complete
+Plan: All plans complete through Phase 5
+Status: Phase 5 complete — ready for Phase 6
+Last activity: 2026-02-14 -- Phase 5 complete (Queue & Offline Handling)
 
 Progress: [████████░░] 52%
 
@@ -129,6 +129,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 05-02-PLAN.md (S3 overflow storage + Phase 5 integration tests)
-Resume file: .planning/phases/05-queue-offline-handling/05-02-SUMMARY.md
-Next plan: Phase 5 complete. Ready for Phase 6 or phase test suite.
+Stopped at: Phase 5 complete — all docs updated
+Resume file: .planning/ROADMAP.md
+Next plan: Phase 6: Webmail & Groupware (discuss → research → plan → execute)

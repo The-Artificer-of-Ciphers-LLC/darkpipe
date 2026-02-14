@@ -69,9 +69,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Queue & Offline Handling
 
-- [ ] **QUEUE-01**: Optional encrypted message queue on cloud relay when home device is offline
-- [ ] **QUEUE-02**: Optional queue overflow to Storj or S3-compatible object storage (encrypted at rest)
-- [ ] **QUEUE-03**: User can disable queuing entirely — mail bounces if home device unreachable
+- [x] **QUEUE-01**: Optional encrypted message queue on cloud relay when home device is offline
+- [x] **QUEUE-02**: Optional queue overflow to Storj or S3-compatible object storage (encrypted at rest)
+- [x] **QUEUE-03**: User can disable queuing entirely — mail bounces if home device unreachable
 
 ### Device Profiles & Client Setup
 
@@ -206,9 +206,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AUTH-05 | Phase 4: DNS & Email Authentication | ✓ Complete |
 | AUTH-06 | Phase 4: DNS & Email Authentication | ✓ Complete |
 | AUTH-07 | Phase 4: DNS & Email Authentication | ✓ Complete |
-| QUEUE-01 | Phase 5: Queue & Offline Handling | Pending |
-| QUEUE-02 | Phase 5: Queue & Offline Handling | Pending |
-| QUEUE-03 | Phase 5: Queue & Offline Handling | Pending |
+| QUEUE-01 | Phase 5: Queue & Offline Handling | ✓ Complete |
+| QUEUE-02 | Phase 5: Queue & Offline Handling | ✓ Complete |
+| QUEUE-03 | Phase 5: Queue & Offline Handling | ✓ Complete |
 | WEB-01 | Phase 6: Webmail & Groupware | Pending |
 | WEB-02 | Phase 6: Webmail & Groupware | Pending |
 | CAL-01 | Phase 6: Webmail & Groupware | Pending |

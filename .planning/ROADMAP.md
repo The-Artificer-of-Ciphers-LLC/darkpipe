@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Cloud Relay** - Minimal internet-facing SMTP gateway that receives and forwards mail (completed 2026-02-09)
 - [x] **Phase 3: Home Mail Server** - Full-featured mail server with IMAP access on user-owned hardware (completed 2026-02-09)
 - [x] **Phase 4: DNS & Email Authentication** - Automated SPF/DKIM/DMARC setup and DNS provider integration (completed 2026-02-14)
-- [ ] **Phase 5: Queue & Offline Handling** - Encrypted message queuing when home device is unreachable
+- [x] **Phase 5: Queue & Offline Handling** - Encrypted message queuing when home device is unreachable (completed 2026-02-14)
 - [ ] **Phase 6: Webmail & Groupware** - Web-based email access with calendar and contacts sync
 - [ ] **Phase 7: Build System & Deployment** - GitHub Actions pipeline for user-customized multi-arch Docker images
 - [ ] **Phase 8: Device Profiles & Client Setup** - Auto-generated device configuration for seamless mail client onboarding
@@ -102,8 +102,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 05-01-PLAN.md -- Encrypted RAM queue with age encryption, QueuedForwarder wrapper, background processor, configurable queue-or-bounce behavior
-- [ ] 05-02-PLAN.md -- S3-compatible overflow storage via minio-go (Storj/AWS S3/MinIO), queue integration, and phase integration test suite
+- [x] 05-01-PLAN.md -- Encrypted RAM queue with age encryption, QueuedForwarder wrapper, background processor, configurable queue-or-bounce behavior
+- [x] 05-02-PLAN.md -- S3-compatible overflow storage via minio-go (Storj/AWS S3/MinIO), queue integration, and phase integration test suite
 
 ### Phase 6: Webmail & Groupware
 **Goal**: Non-technical household members access email through a web browser and sync calendars/contacts with their phones and computers
@@ -183,7 +183,7 @@ Note: Phases 5 and 6 can execute in parallel after their dependencies are met. P
 | 2. Cloud Relay | 3/3 | Complete | 2026-02-09 |
 | 3. Home Mail Server | 3/3 | Complete | 2026-02-09 |
 | 4. DNS & Email Authentication | 3/3 | Complete | 2026-02-14 |
-| 5. Queue & Offline Handling | 0/2 | Not started | - |
+| 5. Queue & Offline Handling | 2/2 | Complete | 2026-02-14 |
 | 6. Webmail & Groupware | 0/2 | Not started | - |
 | 7. Build System & Deployment | 0/3 | Not started | - |
 | 8. Device Profiles & Client Setup | 0/3 | Not started | - |
