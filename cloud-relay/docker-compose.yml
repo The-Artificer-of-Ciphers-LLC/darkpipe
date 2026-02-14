@@ -109,6 +109,13 @@ services:
     networks:
       - darkpipe
 
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "25"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
 networks:
   darkpipe:
     driver: bridge

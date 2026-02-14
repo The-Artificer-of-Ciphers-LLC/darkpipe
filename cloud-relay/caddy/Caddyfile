@@ -43,6 +43,28 @@
 		reverse_proxy 10.0.0.2:8090
 	}
 
+	# Monitoring dashboard and health endpoints (Basic Auth required)
+	handle /health/* {
+		basicauth {
+			{$ADMIN_USER} {$ADMIN_PASSWORD_HASH}
+		}
+		reverse_proxy 10.0.0.2:8090
+	}
+
+	handle /status {
+		basicauth {
+			{$ADMIN_USER} {$ADMIN_PASSWORD_HASH}
+		}
+		reverse_proxy 10.0.0.2:8090
+	}
+
+	handle /status/* {
+		basicauth {
+			{$ADMIN_USER} {$ADMIN_PASSWORD_HASH}
+		}
+		reverse_proxy 10.0.0.2:8090
+	}
+
 	# Webmail reverse proxy (default route)
 	reverse_proxy 10.0.0.2:8080 {
 		# Forward client headers

@@ -276,8 +276,16 @@ services:
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-changeme}
       - STALWART_ADMIN_USER=${ADMIN_EMAIL:-admin@example.com}
       - STALWART_ADMIN_PASSWORD=${ADMIN_PASSWORD:-changeme}
+      # Monitoring configuration
+      - MONITOR_ALERT_EMAIL=${MONITOR_ALERT_EMAIL:-}
+      - MONITOR_WEBHOOK_URL=${MONITOR_WEBHOOK_URL:-}
+      - MONITOR_HEALTHCHECK_URL=${MONITOR_HEALTHCHECK_URL:-}
+      - MONITOR_CLI_ALERT_PATH=/data/monitoring/cli-alerts.json
+      - MONITOR_LOG_PATH=/var/log/mail.log
+      - MONITOR_CERT_PATHS=${MONITOR_CERT_PATHS:-}
     volumes:
       - profile-data:/data
+      - monitoring-data:/data/monitoring
     networks:
       - darkpipe
     deploy:
@@ -285,10 +293,11 @@ services:
         limits:
           memory: 64M
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8090/health", "||", "exit", "1"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8090/health/live", "||", "exit", "1"]
       interval: 30s
-      timeout: 10s
+      timeout: 5s
       retries: 3
+      start_period: 10s
 
 networks:
   darkpipe:
@@ -304,6 +313,8 @@ volumes:
   redis-data:
     driver: local
   roundcube-data:
+    driver: local
+  monitoring-data:
     driver: local
   snappymail-data:
     driver: local
