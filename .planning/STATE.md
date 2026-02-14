@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-08)
 
 **Core value:** Your email lives on your hardware, encrypted in transit, never stored on someone else's server -- and it still works like normal email from the outside.
-**Current focus:** Phase 9 - Monitoring & Observability (next up)
+**Current focus:** Phase 9 - Monitoring & Observability (in progress)
 
 ## Current Position
 
-Phase: 8 of 9 (Device Profiles & Client Setup) ✓ Complete
-Plan: 3 of 3 complete
-Status: Phase 8 complete — App passwords, profiles, QR codes, web UI, CLI, Docker deployed
-Last activity: 2026-02-14 -- Phase 8 complete (Device Profiles & Client Setup)
+Phase: 9 of 9 (Monitoring & Observability)
+Plan: 1 of 3 complete
+Status: Core monitoring packages complete — Health checks, queue stats, delivery tracking
+Last activity: 2026-02-14 -- Completed 09-01-PLAN.md (Core Monitoring Data Collection)
 
-Progress: [█████████░] 89%
+Progress: [█████████░] 92%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 23
-- Average duration: 5.6 minutes
-- Total execution time: 2.2 hours
+- Total plans completed: 24
+- Average duration: 5.5 minutes
+- Total execution time: 2.3 hours
 
 **By Phase:**
 
@@ -35,10 +35,12 @@ Progress: [█████████░] 89%
 | 06 (Webmail & Groupware) | 2 | 353s | 177s |
 | 07 (Build System & Deployment) | 3 | 1245s | 415s |
 | 08 (Device Profiles & Client Setup) | 3 | 1274s | 425s |
+| 09 (Monitoring & Observability) | 1 | 388s | 388s |
 
 **Recent Trend:**
-- Last 5 plans: 562s (07-03), 368s (08-01), 526s (08-02), 380s (08-03), avg: 459s
+- Last 5 plans: 368s (08-01), 526s (08-02), 380s (08-03), 388s (09-01), avg: 416s
 - Trend: Phase 08 COMPLETE — webmail integration & tests in 6.3 min
+| Phase 09 P01 | 388 | 2 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -161,6 +163,15 @@ Recent decisions affecting current work:
 - [08-03]: Platform-specific instructions: iOS/macOS get QR+download, Android gets QR+manual, Thunderbird/Outlook get autodiscovery
 - [08-03]: CLI QR command supports both terminal ASCII art and PNG file export
 - [08-03]: Templates and static assets embedded via embed.FS (no runtime file dependencies)
+- [09-01]: Liveness vs Readiness - Liveness always "up" (process alive), readiness performs deep checks (Postfix port 25, IMAP port 993, tunnel)
+- [09-01]: Health check handlers return application/health+json (Kubernetes compatibility)
+- [09-01]: Queue monitor uses postqueue -j JSON output for reliability over text parsing
+- [09-01]: Stuck message threshold 24 hours (configurable via QueueStats.StuckThreshold)
+- [09-01]: Delivery tracker uses ring buffer (not database) for 1000 recent entries to avoid I/O overhead
+- [09-01]: Ring buffer capacity configurable via MONITOR_DELIVERY_HISTORY env var
+- [09-01]: Thread-safe tracker with RWMutex for concurrent log parsing and query access
+- [09-01]: Postfix log parser extracts both inbound and outbound deliveries
+- [09-01]: Status normalization: sent->delivered for clearer user-facing language
 
 ### Pending Todos
 
@@ -175,6 +186,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Phase 8 complete (Device Profiles & Client Setup)
-Resume file: .planning/phases/08-device-profiles-client-setup/08-VERIFICATION.md
-Next plan: Phase 9: Monitoring & Observability (needs discuss → plan → execute)
+Stopped at: Completed 09-01-PLAN.md (Core Monitoring Data Collection)
+Resume file: .planning/phases/09-monitoring-observability/09-01-SUMMARY.md
+Next plan: 09-02-PLAN.md (Monitoring CLI Commands)
