@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 ## Current Position
 
 Phase: 4 of 9 (DNS & Email Authentication)
-Plan: 2 of 3 in current phase (In Progress)
-Status: Executing
-Last activity: 2026-02-14 -- Completed 04-02-PLAN.md (DNS provider API integration)
+Plan: 3 of 3 in current phase (Complete)
+Status: Phase Complete
+Last activity: 2026-02-14 -- Completed 04-03-PLAN.md (DNS validation, PTR verification, and CLI)
 
-Progress: [████████░░] 40%
+Progress: [████████░░] 43%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 11
-- Average duration: 5.7 minutes
-- Total execution time: 1.05 hours
+- Total plans completed: 12
+- Average duration: 6.0 minutes
+- Total execution time: 1.21 hours
 
 **By Phase:**
 
@@ -30,11 +30,11 @@ Progress: [████████░░] 40%
 | 01 (Transport Layer) | 3 | 889s | 296s |
 | 02 (Cloud Relay) | 3 | 1142s | 381s |
 | 03 (Home Mail Server) | 3 | 881s | 294s |
-| 04 (DNS & Email Auth) | 2 | 906s | 453s |
+| 04 (DNS & Email Auth) | 3 | 1488s | 496s |
 
 **Recent Trend:**
-- Last 5 plans: 306s, 275s, 347s, 559s
-- Trend: Phase 04 in progress, DNS provider API integration complete (~9.3 min)
+- Last 5 plans: 275s, 347s, 559s, 582s
+- Trend: Phase 04 complete (~9.7 min average), validation + CLI complete
 
 *Updated after each plan completion*
 
@@ -102,6 +102,12 @@ Recent decisions affecting current work:
 - [04-02]: Propagation polling across 3 public DNS servers (Google, Cloudflare, OpenDNS)
 - [04-02]: SPF duplicate prevention (update existing SPF instead of creating second)
 - [04-02]: TXT record quoting for Route53 compatibility
+- [04-03]: Use miekg/dns for validation (not stdlib) for controlled DNS server selection
+- [04-03]: PTR verification uses stdlib net.LookupAddr (handles in-addr.arpa correctly)
+- [04-03]: Detect multiple SPF records as RFC 7208 violation (pitfall #8)
+- [04-03]: Parse Authentication-Results with emersion/go-msgauth/authres (RFC 8601 compliant)
+- [04-03]: CLI uses flag package with environment variable overrides (12-factor pattern)
+- [04-03]: Default DNS servers: 8.8.8.8:53 and 1.1.1.1:53 (public, reliable, fast)
 
 ### Pending Todos
 
@@ -116,6 +122,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 04-02-PLAN.md (DNS provider API integration)
-Resume file: .planning/phases/04-dns-email-auth/04-02-SUMMARY.md
-Next plan: 04-03-PLAN.md (dns-setup CLI)
+Stopped at: Completed 04-03-PLAN.md (DNS validation, PTR verification, and CLI)
+Resume file: .planning/phases/04-dns-email-auth/04-03-SUMMARY.md
+Next plan: Phase 4 complete - next is Phase 5 (Monitoring and Alerting)
