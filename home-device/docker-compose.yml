@@ -6,10 +6,15 @@ version: '3.8'
 #   - Maddy (minimal, Go-based, single binary)
 #   - Postfix+Dovecot (traditional, battle-tested MTA+IMAP)
 #
+# Webmail options via profiles:
+#   - Roundcube (traditional, feature-rich, PHP-based)
+#   - SnappyMail (modern, fast, lightweight)
+#
 # Usage:
-#   docker compose --profile stalwart up -d        # Run Stalwart
-#   docker compose --profile maddy up -d           # Run Maddy
-#   docker compose --profile postfix-dovecot up -d # Run Postfix+Dovecot
+#   docker compose --profile stalwart up -d                          # Mail server only
+#   docker compose --profile stalwart --profile roundcube up -d      # Stalwart + Roundcube
+#   docker compose --profile maddy --profile snappymail up -d        # Maddy + SnappyMail
+#   docker compose --profile postfix-dovecot --profile roundcube up -d # Postfix+Dovecot + Roundcube
 #
 # Environment variables (customize in .env or export):
 #   MAIL_DOMAIN      - Primary mail domain (e.g., example.com)
@@ -115,6 +120,63 @@ services:
       timeout: 10s
       retries: 3
 
+  # Roundcube webmail (profile: roundcube)
+  roundcube:
+    image: roundcube/roundcubemail:1.6.13
+    profiles: ["roundcube"]
+    container_name: roundcube
+    restart: unless-stopped
+    ports:
+      - "8080:80"    # Caddy reverse proxy connects here
+    volumes:
+      - ./webmail/roundcube/config.inc.php:/var/roundcube/config/config.inc.php:ro
+      - roundcube-data:/var/roundcube/db
+    environment:
+      - ROUNDCUBEMAIL_DB_TYPE=sqlite
+      - ROUNDCUBEMAIL_UPLOAD_MAX_FILESIZE=25M
+    extra_hosts:
+      - "mail-server:host-gateway"
+    networks:
+      - darkpipe
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/", "||", "exit", "1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # SnappyMail webmail (profile: snappymail)
+  snappymail:
+    image: djmaze/snappymail:2.38.2
+    profiles: ["snappymail"]
+    container_name: snappymail
+    restart: unless-stopped
+    ports:
+      - "8080:8888"  # SnappyMail internal port is 8888
+    volumes:
+      - snappymail-data:/var/lib/snappymail
+      - ./webmail/snappymail/domains/default.json:/var/lib/snappymail/data/_data_/_default_/domains/default.json:ro
+    environment:
+      - UPLOAD_MAX_SIZE=25M
+      - LOG_TO_STDOUT=true
+      - MEMORY_LIMIT=128M
+    extra_hosts:
+      - "mail-server:host-gateway"
+    networks:
+      - darkpipe
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8888/", "||", "exit", "1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   # Rspamd spam filter (shared across all mail server options)
   rspamd:
     image: rspamd/rspamd:latest
@@ -173,4 +235,8 @@ volumes:
   rspamd-data:
     driver: local
   redis-data:
+    driver: local
+  roundcube-data:
+    driver: local
+  snappymail-data:
     driver: local
