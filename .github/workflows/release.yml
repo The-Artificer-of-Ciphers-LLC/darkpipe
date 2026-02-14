@@ -1,0 +1,84 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  packages: write
+  contents: write
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-alpha') }}
+          body: |
+            ## DarkPipe ${{ github.ref_name }}
+            
+            ### Deployment
+            
+            **Pre-built images (recommended for most users):**
+            ```bash
+            # Default stack (Stalwart + SnappyMail)
+            docker pull ghcr.io/${{ github.repository }}/cloud-relay:${{ github.ref_name }}
+            docker pull ghcr.io/${{ github.repository }}/home-stalwart:${{ github.ref_name }}-default
+            
+            # Conservative stack (Postfix+Dovecot + Roundcube + Radicale)
+            docker pull ghcr.io/${{ github.repository }}/cloud-relay:${{ github.ref_name }}
+            docker pull ghcr.io/${{ github.repository }}/home-postfix-dovecot:${{ github.ref_name }}-conservative
+            ```
+            
+            **Setup tool:**
+            Download the platform-specific setup binary from the assets below and run:
+            ```bash
+            chmod +x darkpipe-setup-<os>-<arch>
+            ./darkpipe-setup-<os>-<arch>
+            ```
+            
+            **Custom builds:**
+            Fork this repository and trigger the "Build Custom Stack" workflow with your component selection.
+            
+            ### What's Changed
+            
+            See release notes below.
+
+  build-setup-tool:
+    runs-on: ubuntu-latest
+    if: hashFiles('deploy/setup/cmd/darkpipe-setup/main.go') != ''
+    strategy:
+      matrix:
+        include:
+          - os: linux
+            arch: amd64
+          - os: linux
+            arch: arm64
+          - os: darwin
+            arch: arm64
+          - os: darwin
+            arch: amd64
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Build setup tool
+        run: |
+          cd deploy/setup
+          CGO_ENABLED=0 GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }} \
+            go build -trimpath -ldflags="-s -w -X main.version=${{ github.ref_name }}" \
+            -o darkpipe-setup-${{ matrix.os }}-${{ matrix.arch }} \
+            ./cmd/darkpipe-setup/
+
+      - name: Upload release asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: deploy/setup/darkpipe-setup-${{ matrix.os }}-${{ matrix.arch }}
