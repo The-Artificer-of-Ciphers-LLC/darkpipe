@@ -193,7 +193,7 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-None yet.
+- **Mail migration tool for existing providers** — Migration from MailCow, iCloud, Gmail, Outlook, other self-hosted (v2 scope)
 
 ### Blockers/Concerns
 
