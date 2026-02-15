@@ -50,6 +50,13 @@ Phase-level decisions archived in milestones/v1.0-ROADMAP.md.
 - golang.org/x/* classified as BSD-3-Clause per actual repo licenses
 - Service software documented as mere aggregation (Docker container boundary)
 
+**Quick Task 2 (Documentation):**
+- No emojis in documentation (professional tone for technical audience)
+- Honest FAQ answers acknowledge IP warmup, VPS restrictions, complexity
+- SPDX header enforcement documented in contributing guide
+- 90-day coordinated disclosure for security vulnerabilities
+- Threat model explicitly states what DarkPipe does/doesn't protect against
+
 ### Pending Todos
 
 - All new .go files must include the two-line SPDX copyright header
@@ -60,6 +67,7 @@ Phase-level decisions archived in milestones/v1.0-ROADMAP.md.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 1 | AGPLv3 license, copyright headers, third-party license doc | 2026-02-15 | dbc79c7 | [1-review-all-dependency-licenses-verify-ag](./quick/1-review-all-dependency-licenses-verify-ag/) |
+| 2 | Complete user-facing documentation (README + 7 guides) | 2026-02-15 | 02046e5 | [2-generate-all-project-documentation](./quick/2-generate-all-project-documentation/) |
 
 ### Blockers/Concerns
 
@@ -70,5 +78,5 @@ Phase-level decisions archived in milestones/v1.0-ROADMAP.md.
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed quick-1-01 (AGPLv3 licensing)
-Next action: /gsd:new-milestone to define v1.1 requirements and roadmap
+Stopped at: Completed quick-02-01 (Complete project documentation)
+Next action: Create v1.0 release tag, publish Docker images, set up donation accounts
