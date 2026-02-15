@@ -55,6 +55,12 @@ Phase-level decisions archived in milestones/v1.0-ROADMAP.md.
 - All new .go files must include the two-line SPDX copyright header
 - Update THIRD-PARTY-LICENSES.md when new dependencies are added
 
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 1 | AGPLv3 license, copyright headers, third-party license doc | 2026-02-15 | dbc79c7 | [1-review-all-dependency-licenses-verify-ag](./quick/1-review-all-dependency-licenses-verify-ag/) |
+
 ### Blockers/Concerns
 
 - go-imap v2 beta (v2.0.0-beta.8) -- monitor for breaking changes
