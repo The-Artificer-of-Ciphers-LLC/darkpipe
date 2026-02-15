@@ -78,5 +78,6 @@ Phase-level decisions archived in milestones/v1.0-ROADMAP.md.
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed quick-02-01 (Complete project documentation)
-Next action: Create v1.0 release tag, publish Docker images, set up donation accounts
+Stopped at: v1.0 shipped, documented, ready for public release
+Resume file: .planning/.continue-here.md
+Next action: /gsd:new-milestone (v1.1) or /gsd:quick for release tasks
