@@ -1,0 +1,19 @@
+version: 2
+
+secret:
+  # Ignore test files containing fake/fixture secrets
+  ignored-paths:
+    - "*_test.go"
+    - "**/*_test.go"
+    - "tests/"
+    - "testdata/"
+
+  ignored-matches:
+    # Fake WireGuard keys used in test fixtures
+    - match: "cF7z8J9L2X5N4M1K6H3G8D9S0A2Q5R7T8W1Y4U3V6B="
+    - match: "xA1B2C3D4E5F6G7H8I9J0K1L2M3N4O5P6Q7R8S9T0U="
+    - match: "pR1v2A3t4E5K6E7y8H9O0m1E2D3e4V5i6C7e8K9E0Y="
+    - match: "cL0u1D2P3u4B5l6I7c8K9E0y1A2B3C4D5E6F7G8H9I="
+    # Test app passwords
+    - match: "TEST-PASS-WORD-1234"
+    - match: "ABCD-EFGH-JKLM-NPQR"
