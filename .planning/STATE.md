@@ -44,9 +44,16 @@ Progress: [##########] 100% (v1.0 complete)
 Milestone-level decisions documented in PROJECT.md Key Decisions table.
 Phase-level decisions archived in milestones/v1.0-ROADMAP.md.
 
+**Quick Task 1 (Licensing):**
+- SPDX header uses AGPL-3.0-or-later (allows future version upgrade)
+- emersion/* libraries classified as MIT per actual GitHub repo licenses
+- golang.org/x/* classified as BSD-3-Clause per actual repo licenses
+- Service software documented as mere aggregation (Docker container boundary)
+
 ### Pending Todos
 
-None -- v1.0 complete.
+- All new .go files must include the two-line SPDX copyright header
+- Update THIRD-PARTY-LICENSES.md when new dependencies are added
 
 ### Blockers/Concerns
 
@@ -57,5 +64,5 @@ None -- v1.0 complete.
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: v1.0 milestone archived and tagged
+Stopped at: Completed quick-1-01 (AGPLv3 licensing)
 Next action: /gsd:new-milestone to define v1.1 requirements and roadmap
