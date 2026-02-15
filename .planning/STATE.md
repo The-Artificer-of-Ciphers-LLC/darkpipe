@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 ## Current Position
 
 Phase: 10 of 10 (Mail Migration)
-Plan: 0 of 0 (not yet planned)
-Status: Phase 10 added — migration tooling for existing email providers
-Last activity: 2026-02-14 -- Added Phase 10 (Mail Migration) before milestone completion
+Plan: 1 of TBD (core engine complete)
+Status: Completed 10-01 IMAP migration core engine
+Last activity: 2026-02-14 -- Completed Phase 10 Plan 01
 
 Progress: [█████████░] 90%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 26
-- Average duration: 5.6 minutes
-- Total execution time: 2.5 hours
+- Total plans completed: 27
+- Average duration: 5.7 minutes
+- Total execution time: 2.6 hours
 
 **By Phase:**
 
@@ -36,18 +36,18 @@ Progress: [█████████░] 90%
 | 07 (Build System & Deployment) | 3 | 1245s | 415s |
 | 08 (Device Profiles & Client Setup) | 3 | 1274s | 425s |
 | 09 (Monitoring & Observability) | 3 | 1294s | 431s |
+| 10 (Mail Migration) | 1 | 422s | 422s |
 
 **Recent Trend:**
-- Last 5 plans: 380s (08-03), 388s (09-01), 450s (09-02), 456s (09-03), avg: 419s
-- Trend: Phase 09 COMPLETE — full monitoring stack in 21.6 min total
+- Last 5 plans: 388s (09-01), 450s (09-02), 456s (09-03), 422s (10-01), avg: 429s
+- Trend: Phase 10 started — mail migration core engine in 7.0 min
 
 **Recent Plans:**
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
-| Phase 09 | P01 | 388s | 2 | 14 |
 | Phase 09 | P02 | 450s | 2 | 12 |
 | Phase 09 | P03 | 456s | 2 | 12 |
-| Phase 09 P03 | 456 | 2 tasks | 12 files |
+| Phase 10 | P01 | 422s | 2 | 6 |
 
 ## Accumulated Context
 
@@ -190,6 +190,13 @@ Recent decisions affecting current work:
 - [09-03]: Web dashboard added to profile server at /status (64MB memory sufficient)
 - [09-03]: Push pinger uses Dead Man's Switch pattern: external service alerts when pings stop
 - [09-03]: Docker HEALTHCHECK updated to /health/live (liveness check, always up if process alive)
+- [10-01]: go-imap v2.0.0-beta.8 for IMAP sync (v2 API redesign with better concurrency)
+- [10-01]: Thread-safe state tracking with sync.RWMutex and auto-save every 100 operations
+- [10-01]: State file at /data/migration-state.json (aligns with container volume pattern)
+- [10-01]: Gmail folder mappings: skip All Mail/Important/Starred, map Sent Mail -> Sent
+- [10-01]: Outlook folder mappings: skip Clutter, map Deleted Items -> Trash
+- [10-01]: IMAP APPEND preserves INTERNALDATE and flags for chronological mailbox order
+- [10-01]: Folder-level migration tracking enables folder resume in future plans
 
 ### Pending Todos
 
@@ -200,10 +207,11 @@ None — migration tool promoted to Phase 10.
 - VPS port 25 restrictions are absolute blockers -- must validate provider before any relay work (Phase 1 prerequisite)
 - IP warmup requires 4-6 weeks after Phase 4 (DNS/auth) completes -- time-based, not development
 - Stalwart 0.15.4 is pre-v1.0 (v1.0 expected Q2 2026) -- schema may change
+- go-imap v2 is beta (v2.0.0-beta.8) -- API may change before stable release, monitor for breaking changes
 
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Phase 10 added, needs discuss → plan → execute
-Resume file: .planning/ROADMAP.md
-Next plan: `/gsd:discuss-phase 10` → `/gsd:plan-phase 10` → `/gsd:execute-phase 10`
+Stopped at: Completed 10-01 IMAP migration core engine
+Resume file: .planning/phases/10-mail-migration/10-01-SUMMARY.md
+Next plan: Phase 10 Plan 02 (provider integrations) or continue with remaining Phase 10 plans
