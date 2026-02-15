@@ -89,9 +89,13 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Deployment & UX
 
-- [ ] **UX-01**: Tiered experience — simple defaults for non-technical users, full control for power users
+- [x] **UX-01**: Tiered experience — simple defaults for non-technical users, full control for power users
 - [x] **UX-02**: Cloud relay runs in smallest possible container footprint
-- [ ] **UX-03**: Runs on Raspberry Pi 4+ (arm64), x64/arm64 Docker/Podman, TrueNAS Scale, Unraid
+- [x] **UX-03**: Runs on Raspberry Pi 4+ (arm64), x64/arm64 Docker/Podman, TrueNAS Scale, Unraid
+
+### Migration
+
+- [x] **MIG-01**: Migration tool for existing email providers (IMAP sync with folder/flag/date preservation, CalDAV/CardDAV import, provider APIs, CLI wizard with dry-run)
 
 ## v2 Requirements
 
@@ -165,7 +169,6 @@ Explicitly excluded. Documented to prevent scope creep.
 | AI-powered spam/categorization | Privacy concern — adds dependencies, complexity; Rspamd Bayesian learning sufficient |
 | Built-in VPN/Tor routing | Separate concern; document how to run behind VPN if desired |
 | OAuth/social login | Email+password + app-generated passwords sufficient for v1 |
-| Automatic Gmail/Outlook migration | High complexity, API changes break it; provide manual migration guide |
 | Self-hosted DNS server | Increases attack surface; use existing DNS providers with API integration |
 | Multi-tenant SaaS mode | DarkPipe is self-hosted for single user/family; multi-tenancy adds vast complexity |
 | Windows/macOS native server | Linux is email server standard; production = Linux containers |
@@ -223,17 +226,18 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PROF-03 | Phase 8: Device Profiles & Client Setup | ✓ Complete |
 | PROF-04 | Phase 8: Device Profiles & Client Setup | ✓ Complete |
 | PROF-05 | Phase 8: Device Profiles & Client Setup | ✓ Complete |
-| MON-01 | Phase 9: Monitoring & Observability | Pending |
-| MON-02 | Phase 9: Monitoring & Observability | Pending |
-| MON-03 | Phase 9: Monitoring & Observability | Pending |
-| CERT-03 | Phase 9: Monitoring & Observability | Pending |
-| CERT-04 | Phase 9: Monitoring & Observability | Pending |
+| MON-01 | Phase 9: Monitoring & Observability | ✓ Complete |
+| MON-02 | Phase 9: Monitoring & Observability | ✓ Complete |
+| MON-03 | Phase 9: Monitoring & Observability | ✓ Complete |
+| CERT-03 | Phase 9: Monitoring & Observability | ✓ Complete |
+| CERT-04 | Phase 9: Monitoring & Observability | ✓ Complete |
+| MIG-01 | Phase 10: Mail Migration | ✓ Complete |
 
 **Coverage:**
-- v1 requirements: 50 total (12 categories)
-- Mapped to phases: 50/50
+- v1 requirements: 51 total (13 categories)
+- Mapped to phases: 51/51
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-08*
-*Last updated: 2026-02-08 after roadmap creation — traceability complete*
+*Last updated: 2026-02-15 after Phase 10 (Mail Migration) completion*

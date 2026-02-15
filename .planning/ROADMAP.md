@@ -21,7 +21,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 7: Build System & Deployment** - GitHub Actions pipeline for user-customized multi-arch Docker images (completed 2026-02-14)
 - [x] **Phase 8: Device Profiles & Client Setup** - Auto-generated device configuration for seamless mail client onboarding (completed 2026-02-14)
 - [x] **Phase 9: Monitoring & Observability** - Mail health visibility, delivery tracking, and certificate lifecycle management (completed 2026-02-14)
-- [ ] **Phase 10: Mail Migration** - Import mailboxes, contacts, and calendars from existing email providers via IMAP sync and provider APIs
+- [x] **Phase 10: Mail Migration** - Import mailboxes, contacts, and calendars from existing email providers via IMAP sync and provider APIs (completed 2026-02-15)
 
 ## Phase Details
 
@@ -184,10 +184,10 @@ Plans:
 **Plans:** 4 plans
 
 Plans:
-- [ ] 10-01-PLAN.md -- IMAP migration core: resumable state tracking, IMAP sync engine with date/flag preservation, configurable folder mapping
-- [ ] 10-02-PLAN.md -- CalDAV/CardDAV sync engines with contact merge logic, .vcf and .ics file import handlers
-- [ ] 10-03-PLAN.md -- Provider integrations: Gmail/Outlook OAuth2 device flow, MailCow/Mailu API clients, iCloud/docker-mailserver/generic providers
-- [ ] 10-04-PLAN.md -- CLI wizard command (darkpipe-setup migrate), pterm progress display, dry-run preview, and phase integration test suite
+- [x] 10-01-PLAN.md -- IMAP migration core: resumable state tracking, IMAP sync engine with date/flag preservation, configurable folder mapping
+- [x] 10-02-PLAN.md -- CalDAV/CardDAV sync engines with contact merge logic, .vcf and .ics file import handlers
+- [x] 10-03-PLAN.md -- Provider integrations: Gmail/Outlook OAuth2 device flow, MailCow/Mailu API clients, iCloud/docker-mailserver/generic providers
+- [x] 10-04-PLAN.md -- CLI wizard command (darkpipe-setup migrate), pterm progress display, dry-run preview, and phase integration test suite
 
 ## Progress
 
@@ -207,8 +207,9 @@ Note: Phases 5 and 6 can execute in parallel after their dependencies are met. P
 | 7. Build System & Deployment | 3/3 | Complete | 2026-02-14 |
 | 8. Device Profiles & Client Setup | 3/3 | Complete | 2026-02-14 |
 | 9. Monitoring & Observability | 3/3 | Complete | 2026-02-14 |
-| 10. Mail Migration | 0/4 | Planned | - |
+| 10. Mail Migration | 4/4 | Complete | 2026-02-15 |
 
 ---
 *Roadmap created: 2026-02-08*
-*Depth: Comprehensive (10 phases, 50 requirements mapped)*
+*Depth: Comprehensive (10 phases, 51 requirements mapped)*
+*Last updated: 2026-02-15 after Phase 10 (Mail Migration) completion*

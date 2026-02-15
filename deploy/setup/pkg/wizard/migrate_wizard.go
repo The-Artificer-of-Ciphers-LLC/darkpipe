@@ -264,10 +264,10 @@ func promptDestinationCredentials(cfg *MigrationConfig) error {
 	if cfg.DestIMAP == "" {
 		cfg.DestIMAP = "localhost:993" // Default DarkPipe IMAP
 	}
-	if cfg.DestCalDAV == "" && (cfg.DestCalDAV == "") {
+	if cfg.DestCalDAV == "" {
 		cfg.DestCalDAV = "http://localhost:5232" // Default Radicale
 	}
-	if cfg.DestCardDAV == "" && (cfg.DestCardDAV == "") {
+	if cfg.DestCardDAV == "" {
 		cfg.DestCardDAV = "http://localhost:5232" // Default Radicale
 	}
 
