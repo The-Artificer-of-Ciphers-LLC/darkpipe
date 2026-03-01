@@ -206,7 +206,7 @@ func (h *WebUIHandler) processAddDevice(w http.ResponseWriter, r *http.Request, 
 <li>Your email, calendar, and contacts will sync automatically</li>
 </ol>
 <p><strong>Token expires:</strong> %s (%s)</p>
-<p><a href="%s" class="button">Download Profile (.mobileconfig)</a></p>
+<p><a href="%s" class="button" aria-label="Download .mobileconfig profile for this device">Download Profile (.mobileconfig)</a></p>
 `, expiry.Format(time.RFC3339), time.Until(expiry).Round(time.Second), profileURL)
 
 	} else if platform == "android" {
@@ -240,6 +240,8 @@ func (h *WebUIHandler) processAddDevice(w http.ResponseWriter, r *http.Request, 
 `, email, plainPassword, h.Config.Hostname, h.Config.Hostname, email)
 
 	} else if platform == "thunderbird" || platform == "outlook" {
+		// Capitalize the platform name for display in the heading
+		platformTitle := strings.ToUpper(platform[:1]) + platform[1:]
 		instructions = fmt.Sprintf(`
 <h3>%s Setup</h3>
 <p>Just enter your email address and this app password - %s will auto-discover the settings:</p>
@@ -250,7 +252,7 @@ func (h *WebUIHandler) processAddDevice(w http.ResponseWriter, r *http.Request, 
 <li>Password: <strong>%s</strong></li>
 <li>Click "Continue" - settings will be detected automatically</li>
 </ol>
-`, platform, platform, platform, email, plainPassword)
+`, platformTitle, platformTitle, platformTitle, email, plainPassword)
 
 	} else {
 		// Other/Manual
