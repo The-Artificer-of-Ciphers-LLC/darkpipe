@@ -11,7 +11,7 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 
 Milestone: v1.0 MVP -- SHIPPED 2026-02-15
 Status: All 10 phases complete, 29 plans executed, 51 requirements validated
-Last activity: 2026-02-15 -- Completed quick-2: project documentation
+Last activity: 2026-03-01 -- Completed quick task 3: WCAG AA accessibility review of all web UI
 
 Progress: [##########] 100% (v1.0 complete)
 
@@ -68,6 +68,7 @@ Phase-level decisions archived in milestones/v1.0-ROADMAP.md.
 |---|-------------|------|--------|-----------|
 | 1 | AGPLv3 license, copyright headers, third-party license doc | 2026-02-15 | dbc79c7 | [1-review-all-dependency-licenses-verify-ag](./quick/1-review-all-dependency-licenses-verify-ag/) |
 | 2 | Complete user-facing documentation (README + 7 guides) | 2026-02-15 | 02046e5 | [2-generate-all-project-documentation](./quick/2-generate-all-project-documentation/) |
+| 3 | WCAG AA accessibility review of all web UI | 2026-03-01 | 6746dcc | [3-do-an-accessibility-review-of-the-entire](./quick/3-do-an-accessibility-review-of-the-entire/) |
 
 ### Blockers/Concerns
 
