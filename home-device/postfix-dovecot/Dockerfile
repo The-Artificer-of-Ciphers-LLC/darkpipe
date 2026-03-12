@@ -18,10 +18,9 @@ FROM alpine:3.21
 # - ca-certificates: TLS certificate support
 RUN apk add --no-cache \
     postfix \
-    postfix-lmdb \
     dovecot \
     dovecot-lmtpd \
-    dovecot-pigeonhole \
+    dovecot-pigeonhole-plugin \
     ca-certificates \
     openssl \
     bash
