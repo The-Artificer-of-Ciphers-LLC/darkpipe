@@ -1,8 +1,8 @@
 # GSD State
 
 **Active Milestone:** M005 — Design Validation — External Access & Device Connectivity
-**Active Slice:** S03 — Device Connectivity — Mobile, Desktop & Webmail
-**Phase:** planning
+**Active Slice:** None
+**Phase:** completing-milestone
 **Requirements Status:** 0 active · 0 validated · 0 deferred · 0 out of scope
 
 ## Milestone Registry
@@ -19,4 +19,4 @@
 - None
 
 ## Next Action
-Plan slice S03 (Device Connectivity — Mobile, Desktop & Webmail).
+All slices complete in M005. Write milestone summary.

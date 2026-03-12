@@ -62,7 +62,7 @@ This milestone is complete only when all are true:
 - [x] **S02: Email Round-Trip — Inbound & Outbound Delivery** `risk:high` `depends:[S01]`
   > After this: An email sent from an external provider (Gmail/Outlook) arrives in the home mailbox via cloud relay, and an email sent from the home mail server is delivered to an external recipient — full bidirectional proof.
 
-- [ ] **S03: Device Connectivity — Mobile, Desktop & Webmail** `risk:medium` `depends:[S02]`
+- [x] **S03: Device Connectivity — Mobile, Desktop & Webmail** `risk:medium` `depends:[S02]`
   > After this: A phone on cellular data has a working mail account (via .mobileconfig or manual setup), can send/receive email, sync calendar/contacts, and access webmail. A desktop client (Thunderbird) connects via IMAP/SMTP from an external network. Monitoring dashboard confirms all healthy.
 
 ## Boundary Map

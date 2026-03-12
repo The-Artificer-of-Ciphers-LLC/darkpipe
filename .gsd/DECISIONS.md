@@ -116,3 +116,5 @@
 - "DKIM signing scoped via sign_authenticated + sign_local + sign_networks to prevent re-signing inbound mail"
 - "Outbound relay via cloud relay WireGuard IP 10.8.0.1:25 for all three home mail server profiles (residential IP port 25 blocked, SPF alignment)"
 - "Round-trip verification is human-in-the-loop with helper script (live external email accounts required, cannot be fully automated)"
+- "Device connectivity validation follows validate-infrastructure.sh patterns (--json, --verbose, --dry-run) for consistency across all validation scripts"
+- "Device validation is primarily UAT with automated pre-flight — script checks endpoints are reachable, humans verify actual device behavior"
