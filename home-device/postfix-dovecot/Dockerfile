@@ -4,11 +4,13 @@
 #   Postfix: http://www.postfix.org/
 #   Dovecot: https://doc.dovecot.org/
 
-# Build arguments for multi-architecture support and OCI labels
+# Build arguments available before FROM (for FROM image selection)
 ARG TARGETARCH
-ARG VERSION=dev
 
 FROM alpine:3.21
+
+# Re-declare after FROM for use in LABEL instructions
+ARG VERSION=dev
 
 # Install mail server components
 # - postfix: MTA for SMTP inbound (25) and submission (587)

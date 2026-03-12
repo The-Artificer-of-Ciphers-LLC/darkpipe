@@ -3,10 +3,10 @@
 # Documentation: https://maddy.email/
 # Note: Maddy is currently beta - use with caution for production
 
-# Build arguments for OCI labels
-ARG VERSION=dev
-
 FROM foxcpp/maddy:0.8.2
+
+# Declare after FROM for use in LABEL instructions
+ARG VERSION=dev
 
 # Copy custom configuration
 COPY home-device/maddy/maddy.conf /data/maddy.conf

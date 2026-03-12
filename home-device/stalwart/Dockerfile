@@ -2,10 +2,10 @@
 # Official multi-arch image (supports arm64, amd64)
 # Documentation: https://stalw.art/
 
-# Build arguments for OCI labels
-ARG VERSION=dev
-
 FROM stalwartlabs/stalwart:v0.15
+
+# Declare after FROM for use in LABEL instructions
+ARG VERSION=dev
 
 # Copy custom configuration
 COPY home-device/stalwart/config.toml /opt/stalwart-mail/etc/config.toml
