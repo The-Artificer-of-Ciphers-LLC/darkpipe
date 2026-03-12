@@ -125,9 +125,11 @@ Your email lives on your hardware, encrypted in transit, never stored on someone
 | M002: Post-Launch Hardening | ✓ Complete | 2026-03-12 |
 | M003: Container Runtime Compatibility | ✓ Complete | 2026-03-12 |
 | M004: DarkPipe Website (darkpipe.org) | ✓ Complete | 2026-03-12 |
-| M005: Design Validation: External Access & Device Connectivity | In Progress | — |
+| M005: Design Validation: External Access & Device Connectivity | ⚠️ Partial | 2026-03-12 |
 
 ---
 **Website (M004):** Public website at `website/` — Astro 6 + Tailwind CSS 4 static site with hero landing page, features breakdown, quickstart guide, and FAQ. Dark theme with pipe-green accent, WCAG AA accessible, Cloudflare Pages deployment config ready. Build: `cd website && npm run build` → `website/dist/`.
 
-*Last updated: 2026-03-12 after M004 completion*
+**Design Validation (M005):** Built complete external validation framework — infrastructure validator (6 sections, 35+ checks), device connectivity validator (8 endpoints), and mail round-trip test helper. Fixed three critical config bugs: Caddyfile IP mismatch, transport map routing loop, and IMAP/SMTP false-positive detection. Configured outbound relay and DKIM signing for all mail server profiles. **Live external validation blocked by DNS NXDOMAIN for darkpipe.email** — all tooling verified via dry-run and ready for re-validation when DNS is restored. Run `scripts/validate-infrastructure.sh` and `scripts/validate-device-connectivity.sh` against live infrastructure to complete verification.
+
+*Last updated: 2026-03-12 after M005 completion*

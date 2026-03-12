@@ -1,8 +1,8 @@
 # GSD State
 
-**Active Milestone:** M005 — Design Validation — External Access & Device Connectivity
+**Active Milestone:** None
 **Active Slice:** None
-**Phase:** completing-milestone
+**Phase:** idle
 **Requirements Status:** 0 active · 0 validated · 0 deferred · 0 out of scope
 
 ## Milestone Registry
@@ -10,13 +10,16 @@
 - ✅ **M002:** Post-Launch Hardening
 - ✅ **M003:** Container Runtime Compatibility
 - ✅ **M004:** DarkPipe Website (darkpipe.org)
-- 🔄 **M005:** Design Validation — External Access & Device Connectivity
+- ⚠️ **M005:** Design Validation — External Access & Device Connectivity — PARTIAL (tooling complete, live validation blocked by DNS NXDOMAIN)
 
 ## Recent Decisions
-- None recorded
+- Domain-specific transport map entries instead of wildcard (prevents routing loop)
+- Rspamd DKIM signing for all mail server profiles via single shared config
+- Outbound relay via cloud relay WireGuard IP 10.8.0.1:25 for all three profiles
+- M005 documented as CANNOT FULLY VALIDATE — tooling complete, DNS blocks live verification
 
 ## Blockers
-- None
+- `darkpipe.email` DNS zone has no records (NXDOMAIN) — blocks all external validation
 
 ## Next Action
-All slices complete in M005. Write milestone summary.
+Restore DNS records for darkpipe.email, then re-run validation scripts to complete M005 live verification.
