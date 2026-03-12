@@ -23,6 +23,8 @@ Your email lives on your hardware, encrypted in transit, never stored on someone
 
 **Post-launch hardening (M002):** All containers run with minimal privileges (cap_drop ALL, no-new-privileges, read_only), logs redact PII by default, all provider IMAP clients enforce TLS 1.2+, SMTP relay enforces configurable message size limit, and `.env.example` files document all configuration.
 
+**Container runtime compatibility (M003):** Podman is fully supported via override files (docker-compose.podman.yml, docker-compose.podman-selinux.yml) with no base compose file forks. Apple Containers supported for cloud relay on macOS 26 with shell orchestration script and mTLS transport. Runtime compatibility check script (`check-runtime.sh`) validates Docker, Podman, and Apple Containers environments. All core docs use runtime-agnostic language. CI includes Docker and Podman validation jobs.
+
 ## Requirements
 
 ### Validated
@@ -80,7 +82,7 @@ Your email lives on your hardware, encrypted in transit, never stored on someone
 
 **Target platforms:**
 - Raspberry Pi 4+ (arm64, 4GB RAM recommended)
-- Docker or Podman on x64 or arm64 (including Mac Silicon)
+- Docker, Podman 5.3+, or Apple Containers on x64 or arm64 (including Mac Silicon)
 - TrueNAS Scale 24.10+ applications
 - Unraid Community Applications
 - Proxmox LXC containers
@@ -107,6 +109,8 @@ Your email lives on your hardware, encrypted in transit, never stored on someone
 | S3-compatible overflow (Storj/AWS/MinIO) | Flexible encrypted overflow for offline queuing | ✓ Good |
 | No proprietary hardware | Software-only, commodity hardware (Helm lesson) | ✓ Good |
 | Docker Compose profiles for component selection | Single compose file, profile flags for stack selection | ✓ Good |
+| Override files for Podman/SELinux (not forks) | Base compose files stay Docker-compatible; Podman layers on top | ✓ Good |
+| mTLS default for Apple Containers | WireGuard kernel module unconfirmed in Apple's VM; mTLS is safe default | ✓ Good |
 | Separate Go modules for setup/profiles tools | Isolates CLI dependencies (survey, pterm) from core services | ✓ Good |
 | Dry-run by default for DNS and migration | Safe operations — require explicit --apply for changes | ✓ Good |
 | emersion/go-imap v2 beta for migration | Only Go IMAP v2 client; beta risk accepted, monitor updates | ⚠️ Revisit |
@@ -119,7 +123,7 @@ Your email lives on your hardware, encrypted in transit, never stored on someone
 |-----------|--------|-----------|
 | M001: MVP (Phases 1-10) | ✓ Shipped | 2026-02-15 |
 | M002: Post-Launch Hardening | ✓ Complete | 2026-03-12 |
-| M003: Container Runtime Compatibility | Planning | — |
+| M003: Container Runtime Compatibility | ✓ Complete | 2026-03-12 |
 
 ---
-*Last updated: 2026-03-12 after M003 creation*
+*Last updated: 2026-03-12 after M003 completion*
