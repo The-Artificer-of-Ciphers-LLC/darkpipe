@@ -42,6 +42,14 @@
 #   ports      TCP reachability for SMTP (25), HTTPS (443), submission (587),
 #              and IMAP (993) on relay and tunnel targets
 #   stability  Service recovery timing (requires root; skips otherwise)
+#   mail       Blocklist, DKIM, transport map, relay config, Rspamd checks
+#              (via scripts/lib/validate-mail.sh)
+#
+# Note: The mail section validates infrastructure readiness only. For full
+# end-to-end round-trip testing (outbound delivery + authentication header
+# verification + inbound delivery), see:
+#   scripts/test-mail-roundtrip.sh         Helper script (automated + guided)
+#   docs/validation/mail-roundtrip.md      Step-by-step procedure
 #
 # Examples:
 #   # Quick dry-run to verify script logic
@@ -71,7 +79,7 @@ RELAY_IP="${RELAY_IP:-}"
 OUTPUT_JSON=false
 VERBOSE=false
 DRY_RUN=false
-SECTIONS="dns tls tunnel ports stability"
+SECTIONS="dns tls tunnel ports stability mail"
 
 # Temp dir for section results (portable alternative to associative arrays)
 RESULTS_DIR=""

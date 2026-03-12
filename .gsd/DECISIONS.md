@@ -111,3 +111,8 @@
 - "Infrastructure validation is a single orchestration script (scripts/validate-infrastructure.sh) that sequences existing validators — no new validation logic hand-rolled"
 - "Validation script supports --json, --verbose, --dry-run modes for agent and human consumption"
 - "Port 587/993 validation targets tunnel IP (HOME_DEVICE_IP), not cloud relay public IP — these ports are on the home device"
+- "Domain-specific transport map entries instead of wildcard — prevents outbound mail routing loop between cloud relay and home device"
+- "Rspamd DKIM signing for all mail server profiles (not per-profile signing) — single config point, already running for all profiles"
+- "DKIM signing scoped via sign_authenticated + sign_local + sign_networks to prevent re-signing inbound mail"
+- "Outbound relay via cloud relay WireGuard IP 10.8.0.1:25 for all three home mail server profiles (residential IP port 25 blocked, SPF alignment)"
+- "Round-trip verification is human-in-the-loop with helper script (live external email accounts required, cannot be fully automated)"

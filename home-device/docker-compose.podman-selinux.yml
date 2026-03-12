@@ -57,6 +57,7 @@ services:
       - ./spam-filter/rspamd/local.d:/etc/rspamd/local.d:ro,z
       - ./spam-filter/rspamd/override.d:/etc/rspamd/override.d:ro,z
       - rspamd-data:/var/lib/rspamd
+      - ./spam-filter/rspamd/dkim-keys:/var/lib/rspamd/dkim:ro,z
 
   redis:
     volumes:

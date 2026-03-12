@@ -1,13 +1,17 @@
 # Postfix relay-only (null client) configuration for DarkPipe cloud relay
 #
-# This Postfix instance accepts inbound mail on port 25 from the internet
-# and forwards ALL mail to the Go relay daemon on localhost:10025, which
-# then forwards via WireGuard/mTLS to the home device.
+# This Postfix instance serves two roles:
+# 1. INBOUND: Accepts mail from the internet for user domains and forwards it
+#    to the Go relay daemon on localhost:10025, which tunnels it via
+#    WireGuard/mTLS to the home device for final delivery.
+# 2. OUTBOUND: Accepts mail from the home device (via WireGuard subnet) and
+#    delivers it to external recipients via normal internet SMTP.
 #
 # Key characteristics:
 # - mydestination = (empty) -> no local delivery
-# - transport_maps -> all mail to localhost:10025
-# - mynetworks includes WireGuard subnet for home device outbound submission
+# - transport_maps -> domain-specific routing (user domains to relay daemon,
+#   all other domains via default internet SMTP delivery)
+# - mynetworks includes WireGuard subnet for home device outbound relay
 
 # Hostname and domain (templated by entrypoint.sh)
 myhostname = ${RELAY_HOSTNAME}
@@ -24,7 +28,7 @@ inet_interfaces = all
 inet_protocols = ipv4
 mynetworks = 127.0.0.0/8, [::1]/128, 10.8.0.0/24
 
-# Transport: all mail goes to Go relay daemon on localhost:10025
+# Transport: domain-specific routing (user domains to relay daemon, others via internet)
 transport_maps = lmdb:/etc/postfix/transport
 
 # Message limits

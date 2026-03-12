@@ -1,10 +1,21 @@
 # Postfix transport map for DarkPipe cloud relay
 #
-# ALL inbound mail is forwarded to the Go relay daemon on localhost:10025.
-# The Go daemon then forwards via WireGuard/mTLS transport to the home device.
+# ROUTING LOGIC:
+# - Mail destined for user domains (listed below) is forwarded to the Go relay
+#   daemon on localhost:10025. The daemon then tunnels it via WireGuard/mTLS
+#   to the home device for final delivery.
+# - Mail destined for ALL OTHER domains (external recipients) is delivered via
+#   normal internet SMTP (Postfix default transport). This handles outbound
+#   mail from the home device that was relayed here for delivery.
+#
+# IMPORTANT: Do NOT use a wildcard (* smtp:[127.0.0.1]:10025) here.
+# A wildcard would route outbound mail from the home device back to the relay
+# daemon, creating a routing loop: home -> cloud relay -> relay daemon -> home.
+#
+# To add additional user domains, add one line per domain using the same pattern.
 #
 # This file is hashed with `postmap lmdb:/etc/postfix/transport` in the
 # entrypoint script to create transport.lmdb.
 
-# Wildcard: all mail goes to relay daemon
-* smtp:[127.0.0.1]:10025
+# User domains -> relay daemon -> WireGuard tunnel -> home device
+${RELAY_DOMAIN} smtp:[127.0.0.1]:10025

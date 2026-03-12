@@ -291,6 +291,11 @@ services:
       - ./spam-filter/rspamd/local.d:/etc/rspamd/local.d:ro
       - ./spam-filter/rspamd/override.d:/etc/rspamd/override.d:ro
       - rspamd-data:/var/lib/rspamd
+      # DKIM private keys for outbound signing (read-only)
+      # Key naming: ${domain}.${selector}.key (e.g., example.com.darkpipe.key)
+      # Generate keys with: go run dns/dkim/keygen.go
+      # Place private PEM at: ./spam-filter/rspamd/dkim-keys/
+      - ./spam-filter/rspamd/dkim-keys:/var/lib/rspamd/dkim:ro
     networks:
       - darkpipe
     depends_on:

@@ -222,6 +222,35 @@ max-retry = 72h
 hostname = "mail.example.com"
 
 # ============================================================================
+# Outbound Routing Strategy
+# ============================================================================
+#
+# All outbound mail is relayed through the cloud relay via WireGuard tunnel.
+# Reasons:
+# - Residential ISPs block port 25 outbound, preventing direct delivery.
+# - SPF alignment requires mail to originate from the cloud relay's IP,
+#   which matches the SPF record for the domain.
+# - 10.8.0.1 is the cloud relay's WireGuard address on the VPN subnet.
+#
+# Uses "relay" strategy instead of "mx" (direct MX lookup) so that all
+# outbound mail goes to the cloud relay instead of direct internet delivery.
+
+[queue.strategy]
+# Route ALL outbound mail through the cloud relay (no direct MX delivery).
+route = [ { else = "'relay'" } ]
+
+[queue.route."relay"]
+type = "relay"
+address = "10.8.0.1"
+port = 25
+protocol = "smtp"
+
+[queue.route."relay".tls]
+# No TLS required — traffic is already encrypted via WireGuard tunnel.
+implicit = false
+allow-invalid-certs = true
+
+# ============================================================================
 # Spam/Virus Filtering - Rspamd Integration
 # ============================================================================
 

@@ -135,6 +135,18 @@ message_size_limit = 52428800
 mailbox_size_limit = 0
 
 # ============================================================================
+# Outbound Relay (via Cloud Relay)
+# ============================================================================
+
+# All outbound mail is relayed through the cloud relay via WireGuard tunnel.
+# Reasons:
+# - Residential ISPs block port 25 outbound, preventing direct delivery.
+# - SPF alignment requires mail to originate from the cloud relay's IP,
+#   which matches the SPF record for the domain.
+# - The cloud relay at 10.8.0.1 is the WireGuard peer on the VPN subnet.
+relayhost = [10.8.0.1]:25
+
+# ============================================================================
 # Queue and Delivery
 # ============================================================================
 

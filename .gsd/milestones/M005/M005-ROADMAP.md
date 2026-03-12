@@ -59,7 +59,7 @@ This milestone is complete only when all are true:
 - [x] **S01: Infrastructure Validation — DNS, TLS & Tunnel** `risk:high` `depends:[]`
   > After this: DNS records validate from external resolvers, TLS certificates are trusted, WireGuard/mTLS tunnel is stable between cloud relay and home device, and all required ports (25, 587, 993, 443) respond from the public internet.
 
-- [ ] **S02: Email Round-Trip — Inbound & Outbound Delivery** `risk:high` `depends:[S01]`
+- [x] **S02: Email Round-Trip — Inbound & Outbound Delivery** `risk:high` `depends:[S01]`
   > After this: An email sent from an external provider (Gmail/Outlook) arrives in the home mailbox via cloud relay, and an email sent from the home mail server is delivered to an external recipient — full bidirectional proof.
 
 - [ ] **S03: Device Connectivity — Mobile, Desktop & Webmail** `risk:medium` `depends:[S02]`
