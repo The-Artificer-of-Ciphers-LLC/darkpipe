@@ -9,6 +9,9 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -472,4 +475,39 @@ func TestWizardPrompts(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestProviderTLSMinVersion(t *testing.T) {
+	entries, err := os.ReadDir(".")
+	if err != nil {
+		t.Fatalf("ReadDir: %v", err)
+	}
+
+	var checked int
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".go") || strings.HasSuffix(e.Name(), "_test.go") {
+			continue
+		}
+
+		data, err := os.ReadFile(filepath.Join(".", e.Name()))
+		if err != nil {
+			t.Fatalf("ReadFile %s: %v", e.Name(), err)
+		}
+		src := string(data)
+
+		if !strings.Contains(src, "tls.Config{") {
+			continue
+		}
+
+		checked++
+		if !strings.Contains(src, "MinVersion") {
+			t.Errorf("%s: tls.Config found without MinVersion — all provider TLS configs must set MinVersion: tls.VersionTLS12", e.Name())
+		}
+	}
+
+	if checked == 0 {
+		t.Fatal("no provider files with tls.Config found — test is misconfigured")
+	}
+
+	t.Logf("checked %d provider files for MinVersion", checked)
 }

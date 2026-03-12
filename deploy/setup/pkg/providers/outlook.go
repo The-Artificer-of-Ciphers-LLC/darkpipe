@@ -40,7 +40,8 @@ func (p *OutlookProvider) Slug() string {
 func (p *OutlookProvider) ConnectIMAP(ctx context.Context) (*imapclient.Client, error) {
 	// Dial TLS to outlook.office365.com:993
 	conn, err := tls.Dial("tcp", "outlook.office365.com:993", &tls.Config{
-		ServerName: "outlook.office365.com",
+		ServerName:         "outlook.office365.com",
+		MinVersion: tls.VersionTLS12,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to dial Outlook IMAP: %w", err)

@@ -37,7 +37,8 @@ func (p *iCloudProvider) Slug() string {
 func (p *iCloudProvider) ConnectIMAP(ctx context.Context) (*imapclient.Client, error) {
 	// Dial TLS to imap.mail.me.com:993
 	conn, err := tls.Dial("tcp", "imap.mail.me.com:993", &tls.Config{
-		ServerName: "imap.mail.me.com",
+		ServerName:         "imap.mail.me.com",
+		MinVersion: tls.VersionTLS12,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to dial iCloud IMAP: %w", err)

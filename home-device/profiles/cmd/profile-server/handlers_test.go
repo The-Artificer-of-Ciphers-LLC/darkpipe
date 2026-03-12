@@ -6,6 +6,8 @@ package main
 
 import (
 	"encoding/xml"
+	"fmt"
+	"html/template"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -342,6 +344,67 @@ func TestHandleQRImageWithAuth(t *testing.T) {
 	contentDisposition := w.Header().Get("Content-Disposition")
 	if contentDisposition != "" {
 		t.Errorf("Expected no Content-Disposition for inline image, got '%s'", contentDisposition)
+	}
+}
+
+func setupTestWebUIHandler() *WebUIHandler {
+	// Parse only the templates needed for device management (skip status.html
+	// which requires custom template functions registered in main.go).
+	tmpl, err := template.ParseFS(embedFS, "templates/add_device.html", "templates/add_device_result.html", "templates/device_list.html")
+	if err != nil {
+		panic(fmt.Sprintf("Failed to parse templates: %v", err))
+	}
+	return &WebUIHandler{
+		AppPassStore: newMockAppPasswordStore(),
+		TokenStore:   qrcode.NewMemoryTokenStore(),
+		Config: ServerConfig{
+			Domain:      "example.com",
+			Hostname:    "mail.example.com",
+			CalDAVURL:   "https://mail.example.com/caldav",
+			CardDAVURL:  "https://mail.example.com/carddav",
+			CalDAVPort:  443,
+			CardDAVPort: 443,
+			AdminUser:   "test+<script>alert(1)</script>@example.com",
+			AdminPass:   "testpass",
+		},
+		templates: tmpl,
+	}
+}
+
+func TestInstructionsHTMLEscaping(t *testing.T) {
+	// Test that HTML special characters in email are escaped in all platform outputs.
+	// The email contains a <script> tag to simulate an XSS attempt.
+	platforms := []string{"android", "thunderbird", "outlook", "other"}
+
+	for _, platform := range platforms {
+		t.Run(platform, func(t *testing.T) {
+			handler := setupTestWebUIHandler()
+
+			form := "device_name=TestDevice&platform=" + platform
+			req := httptest.NewRequest(http.MethodPost, "/devices/add", strings.NewReader(form))
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			req.SetBasicAuth("test+<script>alert(1)</script>@example.com", "testpass")
+			w := httptest.NewRecorder()
+
+			handler.HandleAddDevice(w, req)
+
+			if w.Code != http.StatusOK {
+				t.Fatalf("Expected status 200, got %d; body: %s", w.Code, w.Body.String())
+			}
+
+			body := w.Body.String()
+
+			// The escaped form MUST appear
+			if !strings.Contains(body, "&lt;script&gt;") {
+				t.Errorf("Expected escaped <script> tag (&lt;script&gt;) in response body")
+			}
+
+			// The raw <script> tag must NOT appear in the instructions HTML.
+			// We check that the literal <script>alert(1)</script> is not present.
+			if strings.Contains(body, "<script>alert(1)</script>") {
+				t.Errorf("Found raw <script> tag in response body — HTML escaping is broken")
+			}
+		})
 	}
 }
 

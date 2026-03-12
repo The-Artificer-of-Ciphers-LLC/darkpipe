@@ -71,7 +71,8 @@ func (p *MailCowProvider) Slug() string {
 func (p *MailCowProvider) ConnectIMAP(ctx context.Context) (*imapclient.Client, error) {
 	// Dial TLS to IMAPHost:993
 	conn, err := tls.Dial("tcp", p.IMAPHost+":993", &tls.Config{
-		ServerName: p.IMAPHost,
+		ServerName:         p.IMAPHost,
+		MinVersion: tls.VersionTLS12,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to dial MailCow IMAP: %w", err)

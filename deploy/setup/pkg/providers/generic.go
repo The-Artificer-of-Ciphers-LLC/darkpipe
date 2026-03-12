@@ -57,7 +57,8 @@ func (p *GenericProvider) ConnectIMAP(ctx context.Context) (*imapclient.Client, 
 	if p.UseTLS {
 		// Direct TLS connection (IMAPS on port 993)
 		conn, err := tls.Dial("tcp", endpoint, &tls.Config{
-			ServerName: p.IMAPHost,
+			ServerName:         p.IMAPHost,
+			MinVersion: tls.VersionTLS12,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to dial IMAP with TLS: %w", err)

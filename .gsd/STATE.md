@@ -1,7 +1,7 @@
 # GSD State
 
 **Active Milestone:** M002 — Post-Launch Hardening
-**Active Slice:** S03 — TLS & Input Hardening
+**Active Slice:** S04 — Operational Quality
 **Phase:** planning
 **Requirements Status:** 0 active · 0 validated · 0 deferred · 0 out of scope
 
@@ -16,4 +16,4 @@
 - None
 
 ## Next Action
-Plan slice S03 (TLS & Input Hardening).
+Plan slice S04 (Operational Quality).

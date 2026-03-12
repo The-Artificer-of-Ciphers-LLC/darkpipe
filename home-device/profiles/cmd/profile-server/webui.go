@@ -8,6 +8,7 @@ import (
 	"embed"
 	"encoding/base64"
 	"fmt"
+	"html"
 	"html/template"
 	"log"
 	"net/http"
@@ -208,7 +209,7 @@ func (h *WebUIHandler) processAddDevice(w http.ResponseWriter, r *http.Request, 
 </ol>
 <p><strong>Token expires:</strong> %s (%s)</p>
 <p><a href="%s" class="button" aria-label="Download .mobileconfig profile for this device">Download Profile (.mobileconfig)</a></p>
-`, expiry.Format(time.RFC3339), time.Until(expiry).Round(time.Second), profileURL)
+`, html.EscapeString(expiry.Format(time.RFC3339)), time.Until(expiry).Round(time.Second), html.EscapeString(profileURL))
 
 	} else if platform == "android" {
 		// For Android, generate QR code with autoconfig URL
@@ -238,7 +239,7 @@ func (h *WebUIHandler) processAddDevice(w http.ResponseWriter, r *http.Request, 
 <li>SMTP Server: %s (Port 587, STARTTLS)</li>
 <li>Username: %s</li>
 </ul>
-`, email, plainPassword, h.Config.Hostname, h.Config.Hostname, email)
+`, html.EscapeString(email), html.EscapeString(plainPassword), html.EscapeString(h.Config.Hostname), html.EscapeString(h.Config.Hostname), html.EscapeString(email))
 
 	} else if platform == "thunderbird" || platform == "outlook" {
 		// Capitalize the platform name for display in the heading
@@ -253,7 +254,7 @@ func (h *WebUIHandler) processAddDevice(w http.ResponseWriter, r *http.Request, 
 <li>Password: <strong>%s</strong></li>
 <li>Click "Continue" - settings will be detected automatically</li>
 </ol>
-`, platformTitle, platformTitle, platformTitle, email, plainPassword)
+`, html.EscapeString(platformTitle), html.EscapeString(platformTitle), html.EscapeString(platformTitle), html.EscapeString(email), html.EscapeString(plainPassword))
 
 	} else {
 		// Other/Manual
@@ -269,7 +270,7 @@ func (h *WebUIHandler) processAddDevice(w http.ResponseWriter, r *http.Request, 
 <li><strong>SMTP Port:</strong> 587 (STARTTLS)</li>
 <li><strong>Username:</strong> %s (full email address)</li>
 </ul>
-`, email, plainPassword, h.Config.Hostname, h.Config.Hostname, email)
+`, html.EscapeString(email), html.EscapeString(plainPassword), html.EscapeString(h.Config.Hostname), html.EscapeString(h.Config.Hostname), html.EscapeString(email))
 	}
 
 	// Render result page

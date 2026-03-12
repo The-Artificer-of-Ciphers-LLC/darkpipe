@@ -41,7 +41,8 @@ func (p *GmailProvider) Slug() string {
 func (p *GmailProvider) ConnectIMAP(ctx context.Context) (*imapclient.Client, error) {
 	// Dial TLS to imap.gmail.com:993
 	conn, err := tls.Dial("tcp", "imap.gmail.com:993", &tls.Config{
-		ServerName: "imap.gmail.com",
+		ServerName:         "imap.gmail.com",
+		MinVersion: tls.VersionTLS12,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to dial Gmail IMAP: %w", err)

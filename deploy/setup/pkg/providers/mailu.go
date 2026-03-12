@@ -62,7 +62,8 @@ func (p *MailuProvider) Slug() string {
 func (p *MailuProvider) ConnectIMAP(ctx context.Context) (*imapclient.Client, error) {
 	// Dial TLS to IMAPHost:993
 	conn, err := tls.Dial("tcp", p.IMAPHost+":993", &tls.Config{
-		ServerName: p.IMAPHost,
+		ServerName:         p.IMAPHost,
+		MinVersion: tls.VersionTLS12,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to dial Mailu IMAP: %w", err)
