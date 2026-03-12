@@ -37,4 +37,6 @@ dns-setup
 home-device/profiles/profile-server
 package-lock.json
 package.json
+!website/package.json
+!website/package-lock.json
 .bg-shell/
