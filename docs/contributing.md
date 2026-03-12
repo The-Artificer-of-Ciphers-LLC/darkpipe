@@ -205,9 +205,10 @@ func ProcessMessage(msg *SMTPMessage) error {
 
 - **Multi-stage builds:** Separate build and runtime stages
 - **Minimal base images:** Use alpine or distroless for final images
-- **Security:** Run as non-root user where possible
+- **Security:** Run as non-root user where possible. All services must include `security_opt: [no-new-privileges:true]`, `cap_drop: [ALL]`, and `read_only: true` in compose files. Add `cap_add` only for documented capabilities. Include `HEALTHCHECK` in all custom Dockerfiles.
 - **Layer optimization:** Combine RUN commands to reduce layers
 - **Cache optimization:** Copy go.mod/go.sum before source code
+- **Verification:** Run `bash scripts/verify-container-security.sh` to validate all security directives
 
 **Example:**
 ```dockerfile
@@ -262,6 +263,9 @@ ENTRYPOINT ["/usr/local/bin/relay"]
 - Ensure all tests pass: `go test ./...`
 - Ensure code is formatted: `gofmt -s -w .`
 - Ensure no lint warnings: `go vet ./...`
+- If modifying Dockerfiles or compose files: `bash scripts/verify-container-security.sh`
+- If adding log statements: ensure PII (email addresses, tokens) is redacted using `logutil.RedactEmail()`. Run `bash scripts/verify-log-redaction.sh` to check.
+- If adding environment variables: update the relevant `.env.example` file (`cloud-relay/.env.example` or `home-device/.env.example`)
 
 ### 3. Update THIRD-PARTY-LICENSES.md
 
@@ -384,6 +388,9 @@ Before submitting PR:
 - [ ] SMTP connection to relay works (telnet test)
 - [ ] Webmail loads and login works
 - [ ] No errors in docker compose logs
+- [ ] Container security audit passes: `bash scripts/verify-container-security.sh`
+- [ ] Log redaction audit passes: `bash scripts/verify-log-redaction.sh`
+- [ ] `.env.example` files updated if new env vars added
 
 ## Code of Conduct
 
@@ -427,6 +434,6 @@ Thank you for contributing to DarkPipe and helping build a more sovereign intern
 
 ---
 
-Last Updated: 2026-02-15
+Last Updated: 2026-03-12
 
 License: AGPLv3 - See [LICENSE](../LICENSE)

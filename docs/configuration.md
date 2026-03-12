@@ -2,6 +2,20 @@
 
 Complete reference for all configurable aspects of DarkPipe.
 
+## Environment Variable Reference Files
+
+Both deployment targets include `.env.example` files documenting all available environment variables with defaults, descriptions, and required/optional markers:
+
+- `cloud-relay/.env.example` — All cloud relay variables (relay core, mTLS, TLS monitoring, queue, S3 overflow, Caddy)
+- `home-device/.env.example` — All home device variables (domain, users, mail server, profile server, monitoring, webmail, CalDAV)
+
+Copy these to `.env` and customize for your deployment:
+
+```bash
+cp cloud-relay/.env.example cloud-relay/.env
+cp home-device/.env.example home-device/.env
+```
+
 ## Environment Variables
 
 Environment variables are set in `.env` files alongside `docker-compose.yml` files, or exported in the shell before running docker compose commands.
@@ -18,6 +32,7 @@ Environment variables are set in `.env` files alongside `docker-compose.yml` fil
 | `RELAY_TRANSPORT` | wireguard | Transport type: `wireguard` or `mtls` |
 | `RELAY_HOME_ADDR` | 10.8.0.2:25 | Address of home device mail server (via transport tunnel) |
 | `RELAY_MAX_MESSAGE_BYTES` | 52428800 | Maximum message size in bytes (50MB default) |
+| `RELAY_DEBUG` | false | Enable debug logging with full PII (email addresses, tokens) in SMTP session logs |
 
 **WireGuard Transport**
 
@@ -125,6 +140,7 @@ Environment variables are set in `.env` files alongside `docker-compose.yml` fil
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PROFILE_SERVER_PORT` | 8090 | Port for profile server to listen on |
+| `PROFILE_DEBUG` | false | Enable debug logging with full PII (email addresses) in profile server logs |
 
 **Monitoring Configuration**
 
@@ -144,6 +160,20 @@ Rspamd is configured via files in `home-device/spam-filter/rspamd/local.d/` and 
 **Redis Configuration**
 
 Redis is configured via `home-device/spam-filter/redis/redis.conf`. No environment variables needed.
+
+## Container Security Configuration
+
+All Docker Compose services are configured with security hardening directives by default. These are set in the compose files and generally should not be modified:
+
+- `security_opt: [no-new-privileges:true]` — Prevents privilege escalation
+- `cap_drop: [ALL]` — Drops all Linux capabilities
+- `cap_add: [...]` — Selectively re-adds only required capabilities
+- `read_only: true` — Read-only root filesystem
+- `tmpfs: [...]` — Explicit writable tmpfs mounts
+
+All custom Dockerfiles include HEALTHCHECK instructions for container health monitoring.
+
+Run `bash scripts/verify-container-security.sh` to audit these directives.
 
 ## Docker Compose Profiles
 
@@ -568,6 +598,6 @@ services:
 
 ---
 
-Last Updated: 2026-02-15
+Last Updated: 2026-03-12
 
 License: AGPLv3 - See [LICENSE](../LICENSE)

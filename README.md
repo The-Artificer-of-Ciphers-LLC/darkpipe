@@ -53,6 +53,13 @@ Internet ──> Cloud Relay (VPS) ──[WireGuard/mTLS]──> Home Device (yo
 - WireGuard full tunnel (simple setup, kernel-level encryption)
 - mTLS with internal PKI (minimal footprint, certificate-based auth)
 - Automatic certificate rotation (configurable: 30/60/90 days)
+- TLS 1.2+ enforced on all IMAP provider connections
+
+**Container Security**
+- All containers run with `no-new-privileges` and `cap_drop: ALL`
+- Read-only root filesystems with explicit tmpfs mounts
+- Docker HEALTHCHECK on all custom images
+- PII-redacted logging by default (email addresses masked in logs)
 
 **DNS Automation**
 - SPF, DKIM, DMARC record generation and validation

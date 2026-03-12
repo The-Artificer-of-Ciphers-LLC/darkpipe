@@ -245,6 +245,11 @@ Mail server formats are not identical. Switching requires:
 - Home device to mail clients: TLS (IMAPS/SMTPS)
 - Offline queue on cloud relay: age encryption
 
+**Additional security hardening:**
+- All containers run with dropped Linux capabilities and read-only filesystems
+- Logs never contain full email addresses or credentials at default verbosity
+- SMTP relay enforces configurable message size limits (50MB default)
+
 **What's NOT encrypted (by default):**
 - Mail storage on home device (plaintext on disk unless you enable filesystem encryption)
 
@@ -528,6 +533,6 @@ docker stats
 
 ---
 
-Last Updated: 2026-02-15
+Last Updated: 2026-03-12
 
 License: AGPLv3 - See [LICENSE](../LICENSE)

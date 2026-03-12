@@ -31,6 +31,111 @@ The cloud relay is intentionally designed as a pass-through gateway. Mail arrive
    - DMARC (Domain-based Message Authentication, Reporting & Conformance) - policy enforcement
    - All configured automatically by dns-setup tool
 
+5. **Container hardening**
+   - All containers run with `no-new-privileges` security option
+   - Linux capabilities dropped (`cap_drop: ALL`) with selective re-add only where needed
+   - Read-only root filesystems (`read_only: true`) with explicit tmpfs mounts for writable paths
+   - Docker HEALTHCHECK instructions in all custom Dockerfiles
+
+6. **PII-safe logging**
+   - Email addresses are redacted in logs at default verbosity (e.g., `s***r@example.com`)
+   - Tokens and credentials never appear in log output
+   - Debug-level logging (with full PII) available via `RELAY_DEBUG` and `PROFILE_DEBUG` env vars
+
+7. **TLS version enforcement**
+   - All IMAP provider connections enforce TLS 1.2 minimum (`MinVersion: tls.VersionTLS12`)
+   - SMTP relay enforces configurable maximum message size (default 50MB)
+
+## Container Security Hardening
+
+All DarkPipe Docker containers are hardened with defense-in-depth security measures.
+
+### Linux Capabilities
+
+All containers drop all Linux capabilities (`cap_drop: ALL`) and selectively re-add only what is required:
+
+| Service | Capabilities Added | Justification |
+|---------|-------------------|---------------|
+| relay (Postfix) | NET_ADMIN, NET_BIND_SERVICE, DAC_OVERRIDE, CHOWN, SETGID, SETUID, KILL | Root required for Postfix MTA (privileged port 25, mail delivery) |
+| caddy | NET_BIND_SERVICE | Binds ports 80/443 |
+| certbot | NET_BIND_SERVICE | Binds port 80 for ACME challenges |
+| stalwart | NET_BIND_SERVICE | Binds ports 25, 587, 993 |
+| maddy | NET_BIND_SERVICE | Binds ports 25, 587, 993 |
+| postfix-dovecot | NET_BIND_SERVICE, DAC_OVERRIDE, CHOWN, SETGID, SETUID, KILL | Root required for Postfix mail delivery |
+| roundcube, snappymail, rspamd, redis, radicale, profile-server | (none) | No privileged operations needed |
+
+### Read-Only Filesystems
+
+All containers use `read_only: true` root filesystems. Writable paths are provided as explicit tmpfs mounts:
+
+```yaml
+read_only: true
+tmpfs:
+  - /tmp
+  - /run
+```
+
+Mail servers and Postfix have additional tmpfs mounts for spool directories.
+
+### Security Options
+
+All containers include:
+```yaml
+security_opt:
+  - no-new-privileges:true
+```
+
+This prevents privilege escalation via setuid/setgid binaries inside containers.
+
+### Health Checks
+
+All 5 custom Dockerfiles include HEALTHCHECK instructions:
+- **cloud-relay, postfix-dovecot, maddy:** `nc -z localhost 25` (SMTP port check)
+- **stalwart:** `curl --silent --fail http://localhost:8080/` (management API check)
+- **profile-server:** HTTP health endpoint check
+
+All use consistent timing: `--interval=30s --timeout=10s --start-period=10s --retries=3`
+
+### Verification
+
+Run the security audit script to verify all container hardening directives:
+
+```bash
+bash scripts/verify-container-security.sh
+```
+
+This checks all compose files for `security_opt`, `cap_drop`, and `read_only` on every service, and all Dockerfiles for `HEALTHCHECK`. Returns exit code 0 only if all checks pass.
+
+## Log Hygiene and PII Protection
+
+DarkPipe redacts personally identifiable information (PII) from logs at default verbosity.
+
+### What's Redacted
+
+- **Email addresses:** Local-part is masked, domain preserved (e.g., `sender@example.com` → `s***r@example.com`). Domain is preserved because it's needed for multi-domain debugging.
+- **Query string parameters:** Email and token parameters in HTTP access logs are replaced with `[REDACTED]`.
+- **Tokens:** Only the first 8 characters of tokens are logged (256-bit tokens, not reconstructible).
+- **Credentials:** Never logged at any verbosity level.
+
+### Debug Mode
+
+For troubleshooting, full PII can be restored per-binary:
+
+| Variable | Binary | Default |
+|----------|--------|---------|
+| `RELAY_DEBUG=true` | Cloud relay SMTP service | `false` |
+| `PROFILE_DEBUG=true` | Profile server | `false` |
+
+**Warning:** Debug mode logs full email addresses. Use only for active troubleshooting, not in production.
+
+### Verification
+
+Run the static analysis script to check for unredacted PII patterns in log call sites:
+
+```bash
+bash scripts/verify-log-redaction.sh
+```
+
 ## Encryption in Transit
 
 ### Internet to Cloud Relay
@@ -384,8 +489,9 @@ Reporters will be credited in release notes and SECURITY.md.
 - Enable automatic security updates (unattended-upgrades on Ubuntu/Debian)
 - Configure firewall to allow only necessary ports (25, 80, 443, 51820 for WireGuard)
 - Disable SSH password authentication (use SSH keys only)
-- Monitor logs regularly for suspicious activity
+- Monitor logs regularly for suspicious activity (logs redact PII by default — use `RELAY_DEBUG=true` only when actively troubleshooting)
 - Use strong passwords/keys for all services
+- Run `bash scripts/verify-container-security.sh` periodically to audit container hardening
 
 **For Home Device:**
 - Enable full-disk encryption (LUKS, FileVault, etc.)
@@ -452,6 +558,6 @@ Security updates are released as patch versions (e.g., v1.0.1, v1.0.2).
 
 ---
 
-Last Updated: 2026-02-15
+Last Updated: 2026-03-12
 
 License: AGPLv3 - See [LICENSE](../LICENSE)

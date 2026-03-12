@@ -337,8 +337,10 @@ See [docs/security.md](security.md) for detailed threat model and security guara
 - All transport encrypted (WireGuard or mTLS)
 - Internal PKI with automatic rotation
 - SPF/DKIM/DMARC for email authentication
-- TLS required on all SMTP connections
+- TLS required on all SMTP connections (TLS 1.2+ enforced on all IMAP provider clients)
 - Offline queue encrypted at rest
+- All containers hardened: no-new-privileges, cap_drop ALL, read-only root filesystem
+- Logs redact PII (email addresses, tokens) at default verbosity
 
 ## Directory Structure
 
@@ -383,10 +385,19 @@ darkpipe/
 - Root module: Cloud relay service and shared packages
 - deploy/setup/go.mod: Setup wizard CLI (isolated dependencies)
 - home-device/profiles/go.mod: Profile server (isolated dependencies)
+- monitoring/go.mod: Health, status, alerts, delivery, and certificate monitoring
+
+**Security and Verification Scripts:**
+- `scripts/verify-container-security.sh` — Audits all compose files and Dockerfiles for hardening directives
+- `scripts/verify-log-redaction.sh` — Static analysis check for PII leaks in log call sites
+
+**Environment Variable Reference:**
+- `cloud-relay/.env.example` — All cloud relay environment variables with defaults
+- `home-device/.env.example` — All home device environment variables with defaults
 
 ## Technology Stack
 
-- **Go 1.25**: Relay service, CLIs, monitoring, migration tools
+- **Go 1.25.7**: Relay service, CLIs, monitoring, migration tools
 - **Postfix**: SMTP MTA
 - **Stalwart 0.15.4**: Modern all-in-one mail server (Rust)
 - **Maddy 0.8.2**: Minimal Go mail server
@@ -405,6 +416,6 @@ darkpipe/
 
 ---
 
-Last Updated: 2026-02-15
+Last Updated: 2026-03-12
 
 License: AGPLv3 - See [LICENSE](../LICENSE)

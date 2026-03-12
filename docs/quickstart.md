@@ -220,7 +220,13 @@ The wizard generates:
 
 ### 3.3 Review Generated Configuration
 
-Check the generated .env files and adjust if needed:
+Check the generated .env files and adjust if needed. Reference `.env.example` files for all available variables with descriptions and defaults:
+
+```bash
+# See all available variables and their defaults
+cat cloud-relay/.env.example
+cat home-device/.env.example
+```
 
 **cloud-relay/.env:**
 ```bash
@@ -495,6 +501,18 @@ docker compose restart profile-server
 
 ### 8.3 Check Logs
 
+By default, logs redact email addresses for privacy (e.g., `s***r@example.com`). To see full email addresses for troubleshooting, enable debug mode:
+
+```bash
+# Cloud relay — add to cloud-relay/.env
+RELAY_DEBUG=true
+
+# Profile server — add to home-device/.env
+PROFILE_DEBUG=true
+```
+
+Restart services after changing debug settings. **Disable debug mode after troubleshooting** — it logs full PII.
+
 **Cloud relay logs:**
 ```bash
 cd cloud-relay
@@ -589,6 +607,6 @@ New IP addresses have no sending reputation. Warm up gradually over 4-6 weeks:
 
 ---
 
-Last Updated: 2026-02-15
+Last Updated: 2026-03-12
 
 License: AGPLv3 - See [LICENSE](../LICENSE)
