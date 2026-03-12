@@ -37,13 +37,14 @@ ARG VERSION=dev
 # Pin Postfix version for reproducibility
 RUN apk add --no-cache \
     postfix~=3.9 \
+    postfix-doc \
     ca-certificates \
     wireguard-tools \
     gettext \
     netcat-openbsd \
-    && mkdir -p /usr/share/doc/postfix/readme \
     && postfix set-permissions \
-    && postfix check
+    && postfix check \
+    && apk del --no-cache postfix-doc
 
 # Copy relay daemon binary from builder
 COPY --from=builder /build/relay-daemon /usr/local/bin/relay-daemon
