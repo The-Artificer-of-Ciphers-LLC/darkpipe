@@ -86,3 +86,7 @@
 - "Redact email local-part only, preserve domain (domain needed for multi-domain debugging)"
 - "RELAY_DEBUG and PROFILE_DEBUG env vars gate verbose logging per-binary (separate binaries need separate flags)"
 - "token[:8] prefix logging is acceptable (256-bit token, 8 chars not reconstructible, single-use)"
+- "Skip dns.go unit tests in S04 — external DNS dependency makes tests inherently flaky; test only pure-logic validate packages (ports, smtp)"
+- "Duplicate jsonError helper in monitoring/health and monitoring/status (separate go.mod modules, can't share internal packages)"
+- "Leave profile-server http.Error calls as plain-text — these serve browser/device clients downloading .mobileconfig, not JSON API consumers"
+- ".env.example files placed alongside docker-compose.yml in cloud-relay/ and home-device/ directories"

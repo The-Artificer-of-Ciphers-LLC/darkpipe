@@ -1,8 +1,8 @@
 # GSD State
 
 **Active Milestone:** M002 — Post-Launch Hardening
-**Active Slice:** S04 — Operational Quality
-**Phase:** planning
+**Active Slice:** None
+**Phase:** completing-milestone
 **Requirements Status:** 0 active · 0 validated · 0 deferred · 0 out of scope
 
 ## Milestone Registry
@@ -16,4 +16,4 @@
 - None
 
 ## Next Action
-Plan slice S04 (Operational Quality).
+All slices complete in M002. Write milestone summary.

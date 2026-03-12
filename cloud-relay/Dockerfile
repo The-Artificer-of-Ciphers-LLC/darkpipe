@@ -5,7 +5,7 @@
 #
 # Target size: <50MB (Alpine base ~5MB + Postfix ~15MB + wireguard-tools ~5MB + Go binary ~3-5MB + gettext ~2MB = ~30-35MB)
 
-FROM golang:1.24-alpine AS builder
+FROM golang:1.25-alpine AS builder
 
 # Build arguments for multi-architecture support
 ARG TARGETARCH

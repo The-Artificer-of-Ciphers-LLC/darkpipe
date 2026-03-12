@@ -9,12 +9,19 @@ import (
 	"net/http"
 )
 
+// jsonError writes a structured JSON error response with the given message and HTTP status code.
+func jsonError(w http.ResponseWriter, message string, code int) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	json.NewEncoder(w).Encode(map[string]any{"error": message, "code": code})
+}
+
 // LivenessHandler returns an HTTP handler for liveness checks.
 // GET /health/live always returns 200 OK if the process is running.
 func LivenessHandler(checker *Checker) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
 
@@ -31,7 +38,7 @@ func LivenessHandler(checker *Checker) http.HandlerFunc {
 func ReadinessHandler(checker *Checker) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
 

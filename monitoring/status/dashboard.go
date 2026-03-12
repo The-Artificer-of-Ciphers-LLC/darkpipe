@@ -39,17 +39,24 @@ func (h *DashboardHandler) HandleDashboard(w http.ResponseWriter, r *http.Reques
 	}
 }
 
+// jsonError writes a structured JSON error response with the given message and HTTP status code.
+func jsonError(w http.ResponseWriter, message string, code int) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	json.NewEncoder(w).Encode(map[string]any{"error": message, "code": code})
+}
+
 // HandleStatusAPI returns JSON status for AJAX or external tools
 func (h *DashboardHandler) HandleStatusAPI(w http.ResponseWriter, r *http.Request) {
 	status, err := h.aggregator.GetStatus(r.Context())
 	if err != nil {
-		http.Error(w, "Failed to get system status", http.StatusInternalServerError)
+		jsonError(w, "Failed to get system status", http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(status); err != nil {
-		http.Error(w, "Failed to encode JSON", http.StatusInternalServerError)
+		jsonError(w, "Failed to encode JSON", http.StatusInternalServerError)
 		return
 	}
 }
