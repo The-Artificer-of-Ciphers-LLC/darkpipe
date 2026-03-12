@@ -57,7 +57,7 @@ This milestone is complete only when all are true:
   > After this: `podman-compose up` starts all cloud-relay and home-device services, health checks pass, and a full mail send/receive flow works over WireGuard on Podman. Compose files are validated dual-compatible.
 - [x] **S02: Runtime-Agnostic Documentation & Tooling** `risk:medium` `depends:[S01]`
   > After this: All core docs use runtime-agnostic language, a runtime compatibility check script validates any supported runtime, Podman platform guide is published, and the FAQ "Can I use Podman?" answer is "Yes, fully supported."
-- [ ] **S03: Apple Containers Support** `risk:high` `depends:[]`
+- [x] **S03: Apple Containers Support** `risk:high` `depends:[]`
   > After this: A macOS 26 platform guide documents running DarkPipe cloud relay on Apple Containers, images pull and start, and SMTP connectivity is verified. Limitations (no compose, manual orchestration) are clearly documented.
 - [ ] **S04: CI & Regression Validation** `risk:low` `depends:[S01]`
   > After this: GitHub Actions includes a Podman build and compose validation job, existing Docker CI continues to pass, and the compatibility check script runs in CI for both runtimes.

@@ -3,8 +3,8 @@
 # validate prerequisites for running DarkPipe.
 #
 # Checks:
-#   1. Runtime detection: Docker or Podman available
-#   2. Version validation: Docker 24+ or Podman 5.3+
+#   1. Runtime detection: Docker, Podman, or Apple Containers available
+#   2. Version validation: Docker 24+ or Podman 5.3+ (Apple Containers: any)
 #   3. Compose tool: docker compose or podman-compose available
 #   4. SELinux state: enforcing / permissive / disabled / not installed
 #   5. Network basics: port 25 not already bound (cloud relay prerequisite)
@@ -31,8 +31,8 @@ Options:
   --quiet   Suppress per-check output; print only the summary line
 
 Checks performed:
-  • Container runtime detection (Docker or Podman)
-  • Runtime version validation (Docker 24+ / Podman 5.3+)
+  • Container runtime detection (Docker, Podman, or Apple Containers)
+  • Runtime version validation (Docker 24+ / Podman 5.3+ / Apple Containers any)
   • Compose tool availability (docker compose / podman-compose)
   • SELinux enforcement state
   • Port 25 availability (cloud relay prerequisite)
@@ -97,10 +97,11 @@ skip() {
 # ---------------------------------------------------------------------------
 # State variables populated during checks
 # ---------------------------------------------------------------------------
-DETECTED_RUNTIME=""       # "docker" | "podman" | ""
+DETECTED_RUNTIME=""       # "docker" | "podman" | "apple-containers" | ""
 DETECTED_VERSION=""       # raw version string
 DETECTED_COMPOSE=""       # "docker compose" | "podman-compose" | ""
 DETECTED_SELINUX=""       # "Enforcing" | "Permissive" | "Disabled" | "not installed"
+DETECTED_OS=""            # output of uname -s
 
 # ---------------------------------------------------------------------------
 # 1. Runtime detection
@@ -108,17 +109,22 @@ DETECTED_SELINUX=""       # "Enforcing" | "Permissive" | "Disabled" | "not insta
 check_runtime_detection() {
   [[ "$QUIET" == false ]] && printf "\n🐳 Container Runtime Detection\n"
 
+  DETECTED_OS=$(uname -s 2>/dev/null || echo "unknown")
+
   if command -v docker &>/dev/null; then
     DETECTED_RUNTIME="docker"
     pass "Docker found at $(command -v docker)"
   elif command -v podman &>/dev/null; then
     DETECTED_RUNTIME="podman"
     pass "Podman found at $(command -v podman)"
+  elif [[ "$DETECTED_OS" == "Darwin" ]] && command -v container &>/dev/null; then
+    DETECTED_RUNTIME="apple-containers"
+    pass "Apple Containers found at $(command -v container)"
   else
     DETECTED_RUNTIME=""
     fail "No container runtime found" \
-         "neither docker nor podman in PATH" \
-         "Docker 24+ or Podman 5.3+" \
+         "neither docker, podman, nor container (macOS) in PATH" \
+         "Docker 24+ or Podman 5.3+ (or Apple Containers on macOS 26+)" \
          "Install Docker (https://docs.docker.com/get-docker/) or Podman (https://podman.io/getting-started/installation)"
   fi
 
@@ -169,8 +175,14 @@ check_runtime_version() {
     return
   fi
 
+  local version_cmd="$DETECTED_RUNTIME"
+  # Apple Containers uses `container` CLI binary (container --version)
+  if [[ "$DETECTED_RUNTIME" == "apple-containers" ]]; then
+    version_cmd="container"
+  fi
+
   local raw_version
-  raw_version=$("$DETECTED_RUNTIME" --version 2>/dev/null || echo "")
+  raw_version=$("$version_cmd" --version 2>/dev/null || echo "")
 
   if [[ -z "$raw_version" ]]; then
     fail "${DETECTED_RUNTIME} --version returned no output" \
@@ -211,6 +223,9 @@ check_runtime_version() {
            "${required}+" \
            "Upgrade Podman: https://podman.io/getting-started/installation"
     fi
+  elif [[ "$DETECTED_RUNTIME" == "apple-containers" ]]; then
+    # Apple Containers versioning tracks macOS — no minimum enforced yet
+    pass "Apple Containers version ${DETECTED_VERSION}"
   fi
 }
 
@@ -219,6 +234,13 @@ check_runtime_version() {
 # ---------------------------------------------------------------------------
 check_compose_tool() {
   [[ "$QUIET" == false ]] && printf "\n🔧 Compose Tool Availability\n"
+
+  # Apple Containers has no compose equivalent — use orchestration script instead
+  if [[ "$DETECTED_RUNTIME" == "apple-containers" ]]; then
+    DETECTED_COMPOSE="n/a"
+    skip "Apple Containers has no compose equivalent — use scripts/apple-containers-start.sh"
+    return
+  fi
 
   # Try docker compose (v2 plugin) first
   if command -v docker &>/dev/null && docker compose version &>/dev/null; then
@@ -259,6 +281,13 @@ check_compose_tool() {
 # ---------------------------------------------------------------------------
 check_selinux() {
   [[ "$QUIET" == false ]] && printf "\n🔒 SELinux State\n"
+
+  # SELinux is not applicable on macOS
+  if [[ "$DETECTED_OS" == "Darwin" ]]; then
+    DETECTED_SELINUX="not applicable"
+    skip "SELinux is not applicable on macOS"
+    return
+  fi
 
   if ! command -v getenforce &>/dev/null; then
     DETECTED_SELINUX="not installed"

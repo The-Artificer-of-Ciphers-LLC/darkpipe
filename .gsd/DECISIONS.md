@@ -99,3 +99,7 @@
 - "Runtime-agnostic docs use 'generic first, callout when different' pattern — keep docker compose in command examples, add Podman callout blocks for differences (no $RUNTIME variables)"
 - "check-runtime.sh validates system readiness (runtime, version, compose tool, SELinux); verify-podman-compat.sh validates compose file correctness — complementary, not overlapping"
 - "Podman platform guide (deploy/platform-guides/podman.md) is single source of truth; per-component PODMAN.md files remain as operational quick-reference"
+- "Apple Containers scope limited to cloud relay only (2 services) — home device 9-service profile-based compose too complex for manual orchestration"
+- "mTLS is default transport for Apple Containers (WireGuard kernel module availability unconfirmed in Apple's custom Linux kernel)"
+- "Apple Containers orchestration via shell script with --dry-run mode (enables contract verification without macOS 26 hardware)"
+- "Apple Containers detection in check-runtime.sh is lowest priority (after Docker and Podman) since it's macOS-only and dev/testing-focused"
