@@ -1,0 +1,12 @@
+# Podman compatibility overrides for home-device
+# Layer with: podman-compose -f docker-compose.yml -f docker-compose.podman.yml up -d
+#
+# Enables Docker Compose compatibility flags so Podman interprets
+# Docker-specific fields (depends_on conditions, service_healthy, etc.)
+# and uses Docker-compatible network naming conventions.
+#
+# Note: extra_hosts "host-gateway" works natively on Podman 5.3.0+
+
+x-podman:
+  docker_compose_compat: true
+  default_net_name_compat: true

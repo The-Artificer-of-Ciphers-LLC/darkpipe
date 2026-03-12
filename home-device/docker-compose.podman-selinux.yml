@@ -1,0 +1,64 @@
+# SELinux volume label overrides for home-device
+# Layer with: podman-compose -f docker-compose.yml -f docker-compose.podman.yml -f docker-compose.podman-selinux.yml up -d
+#
+# Adds :z (shared) SELinux labels to bind-mount volumes so containers
+# can read host files on Fedora, RHEL, CentOS, and other SELinux-enforcing systems.
+# Named volumes are managed by Podman and do not need SELinux labels.
+#
+# :z = shared label (multiple containers can read)
+# :Z = private label (only this container can access)
+
+services:
+  stalwart:
+    profiles: ["stalwart"]
+    volumes:
+      - ./stalwart/config.toml:/opt/stalwart-mail/etc/config.toml:ro,z
+      - ./stalwart/setup-users.sh:/opt/stalwart-mail/setup-users.sh:ro,z
+      - mail-data:/opt/stalwart-mail/data
+
+  maddy:
+    profiles: ["maddy"]
+    volumes:
+      - ./maddy/maddy.conf:/data/maddy.conf:ro,z
+      - ./maddy/setup-users.sh:/data/setup-users.sh:ro,z
+      - mail-data:/data
+
+  postfix-dovecot:
+    profiles: ["postfix-dovecot"]
+    volumes:
+      - ./postfix-dovecot/postfix/vmailbox:/etc/postfix/vmailbox:ro,z
+      - ./postfix-dovecot/postfix/virtual:/etc/postfix/virtual:ro,z
+      - ./postfix-dovecot/dovecot/users:/etc/dovecot/users:ro,z
+      - mail-data:/var/mail/vhosts
+      - mail-config:/etc/postfix-dovecot
+
+  roundcube:
+    profiles: ["roundcube"]
+    volumes:
+      - ./webmail/roundcube/config.inc.php:/var/roundcube/config/config.inc.php:ro,z
+      - roundcube-data:/var/roundcube/db
+
+  snappymail:
+    profiles: ["snappymail"]
+    volumes:
+      - snappymail-data:/var/lib/snappymail
+      - ./webmail/snappymail/domains/default.json:/var/lib/snappymail/data/_data_/_default_/domains/default.json:ro,z
+
+  radicale:
+    profiles: ["radicale"]
+    volumes:
+      - ./caldav-carddav/radicale/config:/config:ro,z
+      - ./caldav-carddav/radicale/rights:/etc/radicale/rights:ro,z
+      - ./caldav-carddav/radicale/users:/data/users:ro,z
+      - radicale-data:/data/collections
+
+  rspamd:
+    volumes:
+      - ./spam-filter/rspamd/local.d:/etc/rspamd/local.d:ro,z
+      - ./spam-filter/rspamd/override.d:/etc/rspamd/override.d:ro,z
+      - rspamd-data:/var/lib/rspamd
+
+  redis:
+    volumes:
+      - ./spam-filter/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro,z
+      - redis-data:/data

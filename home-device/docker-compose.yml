@@ -1,5 +1,3 @@
-version: '3.8'
-
 # DarkPipe Home Device Mail Server
 # Supports three mail server options via Docker Compose profiles:
 #   - Stalwart (modern, all-in-one, IMAP4rev2/JMAP/CalDAV/CardDAV)
@@ -195,7 +193,7 @@ services:
         limits:
           memory: 256M
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/", "||", "exit", "1"]
+      test: ["CMD-SHELL", "curl -f http://localhost/ || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -232,7 +230,7 @@ services:
         limits:
           memory: 128M
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8888/", "||", "exit", "1"]
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:8888/ || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -269,7 +267,7 @@ services:
         limits:
           memory: 128M
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5232/.web/", "||", "exit", "1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:5232/.web/ || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -379,7 +377,7 @@ services:
         limits:
           memory: 64M
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8090/health/live", "||", "exit", "1"]
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:8090/health/live || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3

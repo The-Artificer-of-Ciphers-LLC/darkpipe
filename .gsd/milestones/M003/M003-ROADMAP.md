@@ -53,7 +53,7 @@ This milestone is complete only when all are true:
 
 ## Slices
 
-- [ ] **S01: Podman Compose Compatibility** `risk:high` `depends:[]`
+- [x] **S01: Podman Compose Compatibility** `risk:high` `depends:[]`
   > After this: `podman-compose up` starts all cloud-relay and home-device services, health checks pass, and a full mail send/receive flow works over WireGuard on Podman. Compose files are validated dual-compatible.
 - [ ] **S02: Runtime-Agnostic Documentation & Tooling** `risk:medium` `depends:[S01]`
   > After this: All core docs use runtime-agnostic language, a runtime compatibility check script validates any supported runtime, Podman platform guide is published, and the FAQ "Can I use Podman?" answer is "Yes, fully supported."

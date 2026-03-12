@@ -1,0 +1,17 @@
+# SELinux volume label overrides for cloud-relay
+# Layer with: podman-compose -f docker-compose.yml -f docker-compose.podman.yml -f docker-compose.podman-selinux.yml up -d
+#
+# Adds :z (shared) SELinux labels to bind-mount volumes so containers
+# can read host files on Fedora, RHEL, CentOS, and other SELinux-enforcing systems.
+# Named volumes are managed by Podman and do not need SELinux labels.
+#
+# :z = shared label (multiple containers can read)
+# :Z = private label (only this container can access)
+
+services:
+  caddy:
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro,z
+      - caddy-data:/data
+      - caddy-config:/config
+      - caddy-logs:/var/log/caddy
