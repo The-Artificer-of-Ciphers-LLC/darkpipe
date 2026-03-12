@@ -41,6 +41,7 @@ RUN apk add --no-cache \
     wireguard-tools \
     gettext \
     netcat-openbsd \
+    && mkdir -p /usr/share/doc/postfix/readme \
     && postfix set-permissions \
     && postfix check
 
