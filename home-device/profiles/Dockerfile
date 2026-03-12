@@ -10,16 +10,20 @@ WORKDIR /build
 # Install build dependencies
 RUN apk add --no-cache git
 
-# Copy go mod files first for layer caching (profiles has its own go.mod)
-COPY home-device/profiles/go.mod home-device/profiles/go.sum ./
+# Copy root module (profiles depends on it via replace directive)
+COPY go.mod go.sum ./
 RUN go mod download
 
-# Copy profiles source code
-COPY home-device/profiles/ .
+# Copy profiles module
+COPY home-device/profiles/go.mod home-device/profiles/go.sum ./home-device/profiles/
+
+# Copy all source (root module + profiles module)
+COPY . .
 
 # Build binary with optimization flags
 ARG TARGETARCH
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} \
+RUN cd home-device/profiles && \
+    CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} \
     go build -ldflags="-s -w" -o /profile-server ./cmd/profile-server/
 
 # Stage 2: Runtime
@@ -35,8 +39,8 @@ WORKDIR /app
 COPY --from=builder /profile-server /app/profile-server
 
 # Copy templates and static assets
-COPY --from=builder /build/cmd/profile-server/templates /app/templates
-COPY --from=builder /build/cmd/profile-server/static /app/static
+COPY --from=builder /build/home-device/profiles/cmd/profile-server/templates /app/templates
+COPY --from=builder /build/home-device/profiles/cmd/profile-server/static /app/static
 
 # OCI labels
 LABEL org.opencontainers.image.source="https://github.com/trek-e/darkpipe"
