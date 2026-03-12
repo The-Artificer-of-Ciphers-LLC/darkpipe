@@ -103,3 +103,7 @@
 - "mTLS is default transport for Apple Containers (WireGuard kernel module availability unconfirmed in Apple's custom Linux kernel)"
 - "Apple Containers orchestration via shell script with --dry-run mode (enables contract verification without macOS 26 hardware)"
 - "Apple Containers detection in check-runtime.sh is lowest priority (after Docker and Podman) since it's macOS-only and dev/testing-focused"
+- "Separate validate-containers.yml workflow for container validation — existing build/release workflows untouched (zero regression by design)"
+- "check-runtime.sh --ci flag skips port 25 check (CI runners have port 25 blocked by cloud provider)"
+- "Podman CI job builds with --format docker to ensure Docker-compatible image format"
+- "podman-compose config in CI is non-fatal (less mature than docker compose config, may have parsing differences)"

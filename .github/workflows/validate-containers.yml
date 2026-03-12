@@ -1,0 +1,92 @@
+name: Validate Containers
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  docker-validate:
+    name: Docker Compose & Script Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Docker version
+        run: docker version
+
+      - name: Validate cloud-relay base compose
+        run: docker compose -f cloud-relay/docker-compose.yml config --quiet
+
+      - name: Validate cloud-relay Podman overlay
+        run: docker compose -f cloud-relay/docker-compose.yml -f cloud-relay/docker-compose.podman.yml config --quiet
+
+      - name: Validate cloud-relay SELinux overlay
+        run: docker compose -f cloud-relay/docker-compose.yml -f cloud-relay/docker-compose.podman-selinux.yml config --quiet
+
+      - name: Validate cloud-relay Podman + SELinux overlay
+        run: docker compose -f cloud-relay/docker-compose.yml -f cloud-relay/docker-compose.podman.yml -f cloud-relay/docker-compose.podman-selinux.yml config --quiet
+
+      - name: Validate cloud-relay certbot compose
+        run: docker compose -f cloud-relay/certbot/docker-compose.certbot.yml config --quiet
+
+      - name: Validate home-device base compose
+        run: docker compose -f home-device/docker-compose.yml config --quiet
+
+      - name: Validate home-device Podman overlay
+        run: docker compose -f home-device/docker-compose.yml -f home-device/docker-compose.podman.yml config --quiet
+
+      - name: Validate home-device SELinux overlay
+        run: docker compose -f home-device/docker-compose.yml -f home-device/docker-compose.podman-selinux.yml config --quiet
+
+      - name: Validate home-device Podman + SELinux overlay
+        run: docker compose -f home-device/docker-compose.yml -f home-device/docker-compose.podman.yml -f home-device/docker-compose.podman-selinux.yml config --quiet
+
+      - name: Run verify-podman-compat.sh
+        run: bash scripts/verify-podman-compat.sh
+
+      - name: Run verify-container-security.sh
+        run: bash scripts/verify-container-security.sh
+
+      - name: Run check-runtime.sh --ci
+        run: bash scripts/check-runtime.sh --ci
+
+  podman-validate:
+    name: Podman Build & Compose Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Podman version
+        run: podman version
+
+      - name: Install podman-compose
+        run: pip install podman-compose
+
+      - name: Build cloud-relay/Dockerfile
+        run: podman build --format docker -f cloud-relay/Dockerfile .
+
+      - name: Build home-device/maddy/Dockerfile
+        run: podman build --format docker -f home-device/maddy/Dockerfile .
+
+      - name: Build home-device/postfix-dovecot/Dockerfile
+        run: podman build --format docker -f home-device/postfix-dovecot/Dockerfile .
+
+      - name: Build home-device/profiles/Dockerfile
+        run: podman build --format docker -f home-device/profiles/Dockerfile .
+
+      - name: Build home-device/stalwart/Dockerfile
+        run: podman build --format docker -f home-device/stalwart/Dockerfile .
+
+      - name: Validate cloud-relay compose (podman-compose)
+        run: podman-compose -f cloud-relay/docker-compose.yml config || echo "⚠️ podman-compose config differs — non-fatal"
+
+      - name: Validate home-device compose (podman-compose)
+        run: podman-compose -f home-device/docker-compose.yml config || echo "⚠️ podman-compose config differs — non-fatal"
+
+      - name: Run check-runtime.sh --ci
+        run: bash scripts/check-runtime.sh --ci

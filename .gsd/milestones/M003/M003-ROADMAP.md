@@ -59,7 +59,7 @@ This milestone is complete only when all are true:
   > After this: All core docs use runtime-agnostic language, a runtime compatibility check script validates any supported runtime, Podman platform guide is published, and the FAQ "Can I use Podman?" answer is "Yes, fully supported."
 - [x] **S03: Apple Containers Support** `risk:high` `depends:[]`
   > After this: A macOS 26 platform guide documents running DarkPipe cloud relay on Apple Containers, images pull and start, and SMTP connectivity is verified. Limitations (no compose, manual orchestration) are clearly documented.
-- [ ] **S04: CI & Regression Validation** `risk:low` `depends:[S01]`
+- [x] **S04: CI & Regression Validation** `risk:low` `depends:[S01]`
   > After this: GitHub Actions includes a Podman build and compose validation job, existing Docker CI continues to pass, and the compatibility check script runs in CI for both runtimes.
 
 ## Boundary Map

@@ -29,6 +29,7 @@ Detect the container runtime environment and validate DarkPipe prerequisites.
 Options:
   --help    Show this help message and exit
   --quiet   Suppress per-check output; print only the summary line
+  --ci      Skip network checks (port 25) for CI environments
 
 Checks performed:
   • Container runtime detection (Docker, Podman, or Apple Containers)
@@ -48,11 +49,13 @@ EOF
 # Parse arguments
 # ---------------------------------------------------------------------------
 QUIET=false
+CI_MODE=false
 
 for arg in "$@"; do
   case "$arg" in
     --help) usage ;;
     --quiet) QUIET=true ;;
+    --ci) CI_MODE=true ;;
     *) printf "Unknown option: %s\n" "$arg" >&2; exit 2 ;;
   esac
 done
@@ -382,5 +385,14 @@ check_runtime_detection
 check_runtime_version
 check_compose_tool
 check_selinux
-check_port_25
+
+if [[ "$CI_MODE" == true ]]; then
+  [[ "$QUIET" == false ]] && printf "\n🌐 Network Prerequisites\n"
+  SKIP=$((SKIP + 1))
+  TOTAL=$((TOTAL + 1))
+  [[ "$QUIET" == false ]] && printf "  ⏭️  SKIP: Port 25 check (--ci mode)\n"
+else
+  check_port_25
+fi
+
 print_summary
