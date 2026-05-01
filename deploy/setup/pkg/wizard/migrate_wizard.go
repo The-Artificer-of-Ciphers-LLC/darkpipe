@@ -11,6 +11,7 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/darkpipe/darkpipe/deploy/setup/pkg/imapsync"
 	"github.com/darkpipe/darkpipe/deploy/setup/pkg/mailmigrate"
+	"github.com/darkpipe/darkpipe/deploy/setup/pkg/migrationdest"
 	"github.com/darkpipe/darkpipe/deploy/setup/pkg/migrationsource"
 	"github.com/darkpipe/darkpipe/deploy/setup/pkg/providers"
 	"github.com/emersion/go-imap/v2/imapclient"
@@ -265,47 +266,22 @@ func promptDestinationCredentials(cfg *MigrationConfig) error {
 
 // connectToDestination connects to destination DarkPipe server
 func connectToDestination(ctx context.Context, cfg *MigrationConfig) (*imapclient.Client, *caldav.Client, *carddav.Client, error) {
-	// Parse IMAP host:port
-	imapHost := "localhost"
-	imapPort := 993
-	// If cfg.DestIMAP contains port, parse it
-	// For simplicity, assume it's "host:port" or just "host"
-
-	// Create generic provider for destination
-	destProvider := &providers.GenericProvider{
-		IMAPHost:   imapHost,
-		IMAPPort:   imapPort,
-		Username:   cfg.DestUser,
-		Password:   cfg.DestPass,
-		CalDAVURL:  cfg.DestCalDAV,
-		CardDAVURL: cfg.DestCardDAV,
-		UseTLS:     true,
-	}
-
-	imapClient, err := destProvider.ConnectIMAP(ctx)
+	dm := migrationdest.New()
+	adapters, err := dm.Connect(ctx, migrationdest.Config{
+		DestIMAP: cfg.DestIMAP,
+		DestCalDAV: cfg.DestCalDAV,
+		DestCardDAV: cfg.DestCardDAV,
+		DestUser: cfg.DestUser,
+		DestPass: cfg.DestPass,
+		TLSPolicy: migrationdest.RequireTLS,
+	})
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("destination IMAP connection failed: %w", err)
+		return nil, nil, nil, fmt.Errorf("destination connection failed: %w", err)
 	}
-
-	// CalDAV is optional
-	var calDAVClient *caldav.Client
-	if cfg.DestCalDAV != "" {
-		calDAVClient, err = destProvider.ConnectCalDAV(ctx)
-		if err != nil {
-			pterm.Warning.Printf("Destination CalDAV connection failed (skipping calendars): %v\n", err)
-		}
+	for _, w := range adapters.Warnings {
+		pterm.Warning.Printf("Destination adapter warning: %v\n", w)
 	}
-
-	// CardDAV is optional
-	var cardDAVClient *carddav.Client
-	if cfg.DestCardDAV != "" {
-		cardDAVClient, err = destProvider.ConnectCardDAV(ctx)
-		if err != nil {
-			pterm.Warning.Printf("Destination CardDAV connection failed (skipping contacts): %v\n", err)
-		}
-	}
-
-	return imapClient, calDAVClient, cardDAVClient, nil
+	return adapters.IMAP, adapters.CalDAV, adapters.CardDAV, nil
 }
 
 // DryRunResult holds aggregated dry-run results
