@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/darkpipe/darkpipe/dns/authtest"
 	"github.com/darkpipe/darkpipe/dns/dkim"
@@ -73,8 +72,6 @@ type RotateResult struct {
 	NewSelector string
 	Record      records.DKIMRecord
 }
-
-type ProviderCapabilities struct{ CanCreate, CanUpdate, CanList, CanDelete bool }
 
 type ErrManualGuideRequired struct {
 	Provider string
@@ -143,58 +140,23 @@ func (m *DefaultModule) Plan(ctx context.Context, in PlanInput) (*Plan, *rsa.Pri
 }
 
 func (m *DefaultModule) Apply(ctx context.Context, plan *Plan) (*ApplyResult, error) {
-	p, err := provider.NewProviderFromDetection(ctx, plan.Domain, nil)
-	if err != nil || p == nil {
-		return nil, ErrManualGuideRequired{Provider: "unknown", Domain: plan.Domain}
+	adapter, err := NewProviderAdapter(ctx, plan.Domain)
+	if err != nil {
+		return nil, err
 	}
 
 	result := &ApplyResult{}
 	for _, rec := range flattenRecords(plan) {
-		if !supportsRecordType(rec.Type) {
-			result.Skipped++
-			continue
-		}
-
-		existing, err := p.ListRecords(ctx, provider.RecordFilter{Type: rec.Type, Name: rec.Name})
-		if err != nil {
-			result.Failed++
-			continue
-		}
-
-		if len(existing) == 0 {
-			if err := p.CreateRecord(ctx, rec); err != nil {
-				result.Failed++
-			} else {
-				result.Applied++
-			}
-			continue
-		}
-
-		match := false
-		for _, ex := range existing {
-			if normalize(ex.Content) == normalize(rec.Content) {
-				if rec.Priority == nil && ex.Priority == nil {
-					match = true
-					break
-				}
-				if rec.Priority != nil && ex.Priority != nil && *rec.Priority == *ex.Priority {
-					match = true
-					break
-				}
-			}
-		}
-		if match {
-			result.Skipped++
-			continue
-		}
-
-		if err := p.UpdateRecord(ctx, existing[0].ID, rec); err != nil {
-			result.Failed++
-		} else {
+		ar := adapter.ApplyRecord(ctx, rec)
+		switch ar.Action {
+		case "create", "update":
 			result.Applied++
+		case "skip":
+			result.Skipped++
+		default:
+			result.Failed++
 		}
 	}
-
 	return result, nil
 }
 
@@ -270,16 +232,4 @@ func flattenRecords(plan *Plan) []provider.Record {
 	return recs
 }
 
-func supportsRecordType(t string) bool {
-	switch t {
-	case "TXT", "MX", "CNAME", "A":
-		return true
-	default:
-		return false
-	}
-}
-
-func normalize(s string) string {
-	return strings.TrimSpace(strings.TrimSuffix(s, "."))
-}
 
