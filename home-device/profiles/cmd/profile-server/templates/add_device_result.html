@@ -45,7 +45,23 @@
             {{end}}
 
             <div class="instructions">
-                {{.Instructions}}
+                <h3>{{.Title}}</h3>
+                {{if .Summary}}<p>{{.Summary}}</p>{{end}}
+                {{if .Steps}}
+                <ol>
+                    {{range .Steps}}<li>{{.}}</li>{{end}}
+                </ol>
+                {{end}}
+                {{if .Fields}}
+                <p><strong>Manual Settings:</strong></p>
+                <ul>
+                    {{range .Fields}}<li><strong>{{.Key}}:</strong> {{.Value}}</li>{{end}}
+                </ul>
+                {{end}}
+                {{if .TokenExpiry}}<p><strong>Token expires:</strong> {{.TokenExpiry}} ({{.TokenTTL}})</p>{{end}}
+                {{if .ProfileURL}}
+                <p><a href="{{.ProfileURL}}" class="button" aria-label="Download .mobileconfig profile for this device">{{if .DownloadLabel}}{{.DownloadLabel}}{{else}}Open Link{{end}}</a></p>
+                {{end}}
             </div>
 
             <div class="form-actions">

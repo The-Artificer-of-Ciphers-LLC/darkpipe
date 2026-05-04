@@ -32,13 +32,13 @@ func TestGenerateQRCode(t *testing.T) {
 	}
 
 	// Verify token exists in store and is valid
-	validEmail, valid, err := store.Validate(token)
+	validEmail, state, err := store.Validate(token)
 	if err != nil {
 		t.Fatalf("Validate failed: %v", err)
 	}
 
-	if !valid {
-		t.Error("Generated token should be valid")
+	if state != ValidationStateValid {
+		t.Errorf("Generated token state mismatch: got %s, want %s", state, ValidationStateValid)
 	}
 
 	if validEmail != email {

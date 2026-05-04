@@ -1,7 +1,6 @@
 // Copyright (C) 2026 The Artificer of Ciphers, LLC. All rights reserved.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-
 package main
 
 import (
@@ -16,9 +15,11 @@ import (
 
 	"github.com/darkpipe/darkpipe/profiles/internal/logutil"
 	"github.com/darkpipe/darkpipe/profiles/pkg/apppassword"
+	"github.com/darkpipe/darkpipe/profiles/pkg/authpolicy"
 	"github.com/darkpipe/darkpipe/profiles/pkg/autoconfig"
 	"github.com/darkpipe/darkpipe/profiles/pkg/autodiscover"
 	"github.com/darkpipe/darkpipe/profiles/pkg/mobileconfig"
+	"github.com/darkpipe/darkpipe/profiles/pkg/onboarding"
 	"github.com/darkpipe/darkpipe/profiles/pkg/qrcode"
 )
 
@@ -36,14 +37,14 @@ func logEmail(email string) string {
 
 // ServerConfig holds the configuration for the profile server.
 type ServerConfig struct {
-	Domain       string
-	Hostname     string
-	CalDAVURL    string
-	CardDAVURL   string
-	CalDAVPort   int
-	CardDAVPort  int
-	AdminUser    string
-	AdminPass    string
+	Domain      string
+	Hostname    string
+	CalDAVURL   string
+	CardDAVURL  string
+	CalDAVPort  int
+	CardDAVPort int
+	AdminUser   string
+	AdminPass   string
 }
 
 // ProfileHandler handles all profile-related HTTP requests.
@@ -52,6 +53,36 @@ type ProfileHandler struct {
 	TokenStore   qrcode.TokenStore
 	AppPassStore apppassword.Store
 	Config       ServerConfig
+}
+
+func (h *ProfileHandler) onboardingModule() onboarding.Module {
+	return onboarding.New(h.ProfileGen, h.TokenStore, h.AppPassStore, onboarding.Config{
+		Domain:      h.Config.Domain,
+		Hostname:    h.Config.Hostname,
+		CalDAVURL:   h.Config.CalDAVURL,
+		CardDAVURL:  h.Config.CardDAVURL,
+		CalDAVPort:  h.Config.CalDAVPort,
+		CardDAVPort: h.Config.CardDAVPort,
+	})
+}
+
+func (h *ProfileHandler) authPolicyModule() authpolicy.Module {
+	return authpolicy.New(authpolicy.Config{AdminUser: h.Config.AdminUser, AdminPass: h.Config.AdminPass})
+}
+
+func (h *ProfileHandler) verifyAdminBasicAuth(w http.ResponseWriter, r *http.Request) bool {
+	user, pass, ok := r.BasicAuth()
+	if !ok {
+		w.Header().Set("WWW-Authenticate", `Basic realm="QR Generation"`)
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return false
+	}
+	if _, err := h.authPolicyModule().Verify(user, pass, false); err != nil {
+		w.Header().Set("WWW-Authenticate", `Basic realm="QR Generation"`)
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return false
+	}
+	return true
 }
 
 // HandleProfileDownload handles GET /profile/download?token=<token>
@@ -67,51 +98,15 @@ func (h *ProfileHandler) HandleProfileDownload(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	// Validate token (single-use)
-	email, valid, err := h.TokenStore.Validate(token)
+	profileData, email, err := h.onboardingModule().GenerateMobileConfigFromToken(token)
 	if err != nil {
-		log.Printf("Token validation error: %v", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	if !valid {
-		http.Error(w, "Invalid, expired, or already-used token", http.StatusUnauthorized)
-		return
-	}
-
-	// Generate new app password for this device
-	deviceName := fmt.Sprintf("QR-%d", time.Now().Unix())
-	plainPassword, err := apppassword.GenerateAppPassword()
-	if err != nil {
-		log.Printf("App password generation error: %v", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	_, err = h.AppPassStore.Create(email, deviceName, plainPassword)
-	if err != nil {
-		log.Printf("App password storage error: %v", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	// Generate .mobileconfig profile
-	profileCfg := mobileconfig.ProfileConfig{
-		Domain:       h.Config.Domain,
-		MailHostname: h.Config.Hostname,
-		Email:        email,
-		AppPassword:  plainPassword,
-		CalDAVURL:    h.Config.CalDAVURL,
-		CardDAVURL:   h.Config.CardDAVURL,
-		CalDAVPort:   h.Config.CalDAVPort,
-		CardDAVPort:  h.Config.CardDAVPort,
-	}
-
-	profileData, err := h.ProfileGen.GenerateProfile(profileCfg)
-	if err != nil {
-		log.Printf("Profile generation error: %v", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		switch err.(type) {
+		case onboarding.ErrInvalidToken, onboarding.ErrExpiredToken, onboarding.ErrUsedToken:
+			http.Error(w, "Invalid, expired, or already-used token", http.StatusUnauthorized)
+		default:
+			log.Printf("Profile onboarding error: %v", err)
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+		}
 		return
 	}
 
@@ -121,7 +116,7 @@ func (h *ProfileHandler) HandleProfileDownload(w http.ResponseWriter, r *http.Re
 	w.WriteHeader(http.StatusOK)
 	w.Write(profileData)
 
-	log.Printf("Profile downloaded for %s (token: %s, device: %s)", logEmail(email), token[:8], deviceName)
+	log.Printf("Profile downloaded for %s (token: %s)", logEmail(email), token[:8])
 }
 
 // HandleAutoconfig handles GET /mail/config-v1.1.xml?emailaddress=<email>
@@ -188,11 +183,7 @@ func (h *ProfileHandler) HandleHealth(w http.ResponseWriter, r *http.Request) {
 // HandleQRGenerate handles GET /qr/generate?email=<email>
 // Authenticated endpoint that generates a QR code and returns PNG image.
 func (h *ProfileHandler) HandleQRGenerate(w http.ResponseWriter, r *http.Request) {
-	// Basic auth check
-	user, pass, ok := r.BasicAuth()
-	if !ok || user != h.Config.AdminUser || pass != h.Config.AdminPass {
-		w.Header().Set("WWW-Authenticate", `Basic realm="QR Generation"`)
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+	if !h.verifyAdminBasicAuth(w, r) {
 		return
 	}
 
@@ -202,18 +193,9 @@ func (h *ProfileHandler) HandleQRGenerate(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Generate QR code URL
-	url, err := qrcode.GenerateQRCode(h.Config.Hostname, email, h.TokenStore)
+	png, err := h.onboardingModule().GenerateQRPNG(email, 256)
 	if err != nil {
 		log.Printf("QR code generation error: %v", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	// Generate PNG image
-	png, err := qrcode.GenerateQRCodePNG(url, 256)
-	if err != nil {
-		log.Printf("QR code PNG generation error: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
@@ -230,11 +212,7 @@ func (h *ProfileHandler) HandleQRGenerate(w http.ResponseWriter, r *http.Request
 // HandleQRImage handles GET /qr/image?email=<email>
 // Same as HandleQRGenerate but returns inline image (for webmail embedding).
 func (h *ProfileHandler) HandleQRImage(w http.ResponseWriter, r *http.Request) {
-	// Basic auth check
-	user, pass, ok := r.BasicAuth()
-	if !ok || user != h.Config.AdminUser || pass != h.Config.AdminPass {
-		w.Header().Set("WWW-Authenticate", `Basic realm="QR Generation"`)
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+	if !h.verifyAdminBasicAuth(w, r) {
 		return
 	}
 
@@ -244,18 +222,9 @@ func (h *ProfileHandler) HandleQRImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Generate QR code URL
-	url, err := qrcode.GenerateQRCode(h.Config.Hostname, email, h.TokenStore)
+	png, err := h.onboardingModule().GenerateQRPNG(email, 256)
 	if err != nil {
 		log.Printf("QR code generation error: %v", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	// Generate PNG image
-	png, err := qrcode.GenerateQRCodePNG(url, 256)
-	if err != nil {
-		log.Printf("QR code PNG generation error: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}

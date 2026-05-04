@@ -1,14 +1,10 @@
 // Copyright (C) 2026 The Artificer of Ciphers, LLC. All rights reserved.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-
 package main
 
 import (
 	"embed"
-	"encoding/base64"
-	"fmt"
-	"html"
 	"html/template"
 	"log"
 	"net/http"
@@ -16,8 +12,9 @@ import (
 	"time"
 
 	"github.com/darkpipe/darkpipe/profiles/pkg/apppassword"
+	"github.com/darkpipe/darkpipe/profiles/pkg/authpolicy"
+	"github.com/darkpipe/darkpipe/profiles/pkg/onboarding"
 	"github.com/darkpipe/darkpipe/profiles/pkg/qrcode"
-
 )
 
 //go:embed templates/*.html static/*.css
@@ -48,11 +45,11 @@ func NewWebUIHandler(appPassStore apppassword.Store, tokenStore qrcode.TokenStor
 
 // Device represents a device (app password) in the UI
 type Device struct {
-	ID          string
-	Email       string
-	DeviceName  string
-	CreatedAt   time.Time
-	LastUsedAt  time.Time
+	ID         string
+	Email      string
+	DeviceName string
+	CreatedAt  time.Time
+	LastUsedAt time.Time
 }
 
 // AddDeviceData holds data for the add device page
@@ -64,13 +61,19 @@ type AddDeviceData struct {
 
 // AddDeviceResultData holds data for the add device result page
 type AddDeviceResultData struct {
-	Email        string
-	DeviceName   string
-	AppPassword  string
-	Platform     string
-	QRCodeData   string        // base64-encoded PNG
-	ProfileURL   string
-	Instructions template.HTML // HTML-safe instructions
+	Email         string
+	DeviceName    string
+	AppPassword   string
+	Platform      string
+	QRCodeData    string // base64-encoded PNG
+	ProfileURL    string
+	Title         string
+	Summary       string
+	Steps         []string
+	Fields        []onboarding.InstructionField
+	DownloadLabel string
+	TokenExpiry   string
+	TokenTTL      string
 }
 
 // DeviceListData holds data for the device list page
@@ -173,115 +176,35 @@ func (h *WebUIHandler) processAddDevice(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 
-	// Generate platform-specific instructions and QR code
-	var qrCodeData string
-	var profileURL string
-	var instructions string
-
-	if platform == "ios" || platform == "macos" {
-		// Generate single-use token for .mobileconfig download
-		expiry := time.Now().Add(15 * time.Minute)
-		token, err := h.TokenStore.Create(email, expiry)
-		if err != nil {
-			log.Printf("Failed to create token: %v", err)
-			h.renderAddDevice(w, email, "Failed to create download token", false)
-			return
-		}
-
-		profileURL = fmt.Sprintf("https://%s/profile/download?token=%s", h.Config.Hostname, token)
-
-		// Generate QR code
-		qrPNG, err := qrcode.GenerateQRCodePNG(profileURL, 256)
-		if err != nil {
-			log.Printf("Failed to generate QR code: %v", err)
-			h.renderAddDevice(w, email, "Failed to generate QR code", false)
-			return
-		}
-		qrCodeData = base64.StdEncoding.EncodeToString(qrPNG)
-
-		instructions = fmt.Sprintf(`
-<h3>iOS/macOS Setup</h3>
-<ol>
-<li>Scan the QR code below with your device camera, OR</li>
-<li>Click the "Download Profile" button below</li>
-<li>Follow the prompts to install the configuration profile</li>
-<li>Your email, calendar, and contacts will sync automatically</li>
-</ol>
-<p><strong>Token expires:</strong> %s (%s)</p>
-<p><a href="%s" class="button" aria-label="Download .mobileconfig profile for this device">Download Profile (.mobileconfig)</a></p>
-`, html.EscapeString(expiry.Format(time.RFC3339)), time.Until(expiry).Round(time.Second), html.EscapeString(profileURL))
-
-	} else if platform == "android" {
-		// For Android, generate QR code with autoconfig URL
-		autoconfigURL := fmt.Sprintf("https://%s/.well-known/autoconfig/mail/config-v1.1.xml?emailaddress=%s", h.Config.Hostname, email)
-
-		qrPNG, err := qrcode.GenerateQRCodePNG(autoconfigURL, 256)
-		if err != nil {
-			log.Printf("Failed to generate QR code: %v", err)
-			h.renderAddDevice(w, email, "Failed to generate QR code", false)
-			return
-		}
-		qrCodeData = base64.StdEncoding.EncodeToString(qrPNG)
-		profileURL = autoconfigURL
-
-		instructions = fmt.Sprintf(`
-<h3>Android Setup</h3>
-<ol>
-<li>Open your email app (Gmail, K-9 Mail, etc.)</li>
-<li>Add a new account</li>
-<li>Enter your email: <strong>%s</strong></li>
-<li>Enter this app password: <strong>%s</strong></li>
-<li>Follow the app's configuration wizard</li>
-</ol>
-<p><strong>Manual Settings:</strong></p>
-<ul>
-<li>IMAP Server: %s (Port 993, SSL)</li>
-<li>SMTP Server: %s (Port 587, STARTTLS)</li>
-<li>Username: %s</li>
-</ul>
-`, html.EscapeString(email), html.EscapeString(plainPassword), html.EscapeString(h.Config.Hostname), html.EscapeString(h.Config.Hostname), html.EscapeString(email))
-
-	} else if platform == "thunderbird" || platform == "outlook" {
-		// Capitalize the platform name for display in the heading
-		platformTitle := strings.ToUpper(platform[:1]) + platform[1:]
-		instructions = fmt.Sprintf(`
-<h3>%s Setup</h3>
-<p>Just enter your email address and this app password - %s will auto-discover the settings:</p>
-<ol>
-<li>Open %s</li>
-<li>Add a new email account</li>
-<li>Email: <strong>%s</strong></li>
-<li>Password: <strong>%s</strong></li>
-<li>Click "Continue" - settings will be detected automatically</li>
-</ol>
-`, html.EscapeString(platformTitle), html.EscapeString(platformTitle), html.EscapeString(platformTitle), html.EscapeString(email), html.EscapeString(plainPassword))
-
-	} else {
-		// Other/Manual
-		instructions = fmt.Sprintf(`
-<h3>Manual Setup</h3>
-<p>Configure your email client with these settings:</p>
-<ul>
-<li><strong>Email:</strong> %s</li>
-<li><strong>Password:</strong> %s</li>
-<li><strong>IMAP Server:</strong> %s</li>
-<li><strong>IMAP Port:</strong> 993 (SSL/TLS)</li>
-<li><strong>SMTP Server:</strong> %s</li>
-<li><strong>SMTP Port:</strong> 587 (STARTTLS)</li>
-<li><strong>Username:</strong> %s (full email address)</li>
-</ul>
-`, html.EscapeString(email), html.EscapeString(plainPassword), html.EscapeString(h.Config.Hostname), html.EscapeString(h.Config.Hostname), html.EscapeString(email))
+	setup, err := onboarding.New(nil, h.TokenStore, h.AppPassStore, onboarding.Config{
+		Domain:      h.Config.Domain,
+		Hostname:    h.Config.Hostname,
+		CalDAVURL:   h.Config.CalDAVURL,
+		CardDAVURL:  h.Config.CardDAVURL,
+		CalDAVPort:  h.Config.CalDAVPort,
+		CardDAVPort: h.Config.CardDAVPort,
+	}).GeneratePlatformSetup(onboarding.Platform(platform), email, plainPassword)
+	if err != nil {
+		log.Printf("Failed to generate platform setup: %v", err)
+		h.renderAddDevice(w, email, "Failed to generate setup instructions", false)
+		return
 	}
 
 	// Render result page
 	data := AddDeviceResultData{
-		Email:        email,
-		DeviceName:   deviceName,
-		AppPassword:  plainPassword,
-		Platform:     platform,
-		QRCodeData:   qrCodeData,
-		ProfileURL:   profileURL,
-		Instructions: template.HTML(instructions),
+		Email:         email,
+		DeviceName:    deviceName,
+		AppPassword:   plainPassword,
+		Platform:      string(setup.Platform),
+		QRCodeData:    setup.QRCodeData,
+		ProfileURL:    setup.ProfileURL,
+		Title:         setup.Title,
+		Summary:       setup.Summary,
+		Steps:         setup.Steps,
+		Fields:        setup.Fields,
+		DownloadLabel: setup.DownloadLabel,
+		TokenExpiry:   setup.TokenExpiry,
+		TokenTTL:      setup.TokenTTL,
 	}
 
 	if err := h.templates.ExecuteTemplate(w, "add_device_result.html", data); err != nil {
@@ -323,6 +246,10 @@ func (h *WebUIHandler) HandleRevokeDevice(w http.ResponseWriter, r *http.Request
 	http.Redirect(w, r, "/devices?success=Device+revoked+successfully", http.StatusSeeOther)
 }
 
+func (h *WebUIHandler) authPolicyModule() authpolicy.Module {
+	return authpolicy.New(authpolicy.Config{AdminUser: h.Config.AdminUser, AdminPass: h.Config.AdminPass})
+}
+
 // authenticate checks Basic Auth credentials
 func (h *WebUIHandler) authenticate(w http.ResponseWriter, r *http.Request) (string, bool) {
 	username, password, ok := r.BasicAuth()
@@ -332,24 +259,14 @@ func (h *WebUIHandler) authenticate(w http.ResponseWriter, r *http.Request) (str
 		return "", false
 	}
 
-	// Verify credentials against app password store
-	// The username should be the email address
-	if !strings.Contains(username, "@") {
-		w.Header().Set("WWW-Authenticate", `Basic realm="Device Management"`)
-		http.Error(w, "Unauthorized - use your email as username", http.StatusUnauthorized)
-		return "", false
-	}
-
-	// Verify password (this will check the main account password, not app passwords)
-	// For simplicity in v1, we'll use the admin credentials for the web UI
-	// In production, this should verify against the actual mail server
-	if username != h.Config.AdminUser || password != h.Config.AdminPass {
+	email, err := h.authPolicyModule().Verify(username, password, true)
+	if err != nil {
 		w.Header().Set("WWW-Authenticate", `Basic realm="Device Management"`)
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return "", false
 	}
 
-	return username, true
+	return email, true
 }
 
 // renderDeviceList renders the device list template

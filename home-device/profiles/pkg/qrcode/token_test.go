@@ -1,7 +1,6 @@
 // Copyright (C) 2026 The Artificer of Ciphers, LLC. All rights reserved.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-
 package qrcode
 
 import (
@@ -20,12 +19,10 @@ func TestGenerateSecureToken(t *testing.T) {
 		t.Fatal("GenerateSecureToken returned empty string")
 	}
 
-	// Should be at least 43 characters (32 bytes base64url = 43 chars without padding)
 	if len(token1) < 43 {
 		t.Errorf("Token too short: got %d, want >= 43", len(token1))
 	}
 
-	// Generate second token to verify uniqueness
 	token2, err := GenerateSecureToken()
 	if err != nil {
 		t.Fatalf("GenerateSecureToken failed on second call: %v", err)
@@ -50,7 +47,6 @@ func TestMemoryTokenStoreCreate(t *testing.T) {
 		t.Fatal("Create returned empty token")
 	}
 
-	// Verify token was stored
 	store.mu.RLock()
 	stored, exists := store.tokens[token]
 	store.mu.RUnlock()
@@ -78,62 +74,54 @@ func TestMemoryTokenStoreValidate(t *testing.T) {
 		t.Fatalf("Create failed: %v", err)
 	}
 
-	// Test valid token
-	validEmail, valid, err := store.Validate(token)
+	validEmail, state, err := store.Validate(token)
 	if err != nil {
 		t.Fatalf("Validate failed: %v", err)
 	}
-
-	if !valid {
-		t.Error("Token should be valid")
+	if state != ValidationStateValid {
+		t.Errorf("Token state mismatch: got %s, want %s", state, ValidationStateValid)
 	}
-
 	if validEmail != email {
 		t.Errorf("Email mismatch: got %s, want %s", validEmail, email)
 	}
 
-	// Test single-use enforcement: second validation should fail
-	_, valid, err = store.Validate(token)
+	_, state, err = store.Validate(token)
 	if err != nil {
 		t.Fatalf("Second Validate failed: %v", err)
 	}
-
-	if valid {
-		t.Error("Token should be invalid after first use (single-use enforcement)")
+	if state != ValidationStateUsed {
+		t.Errorf("Token state mismatch after first use: got %s, want %s", state, ValidationStateUsed)
 	}
 }
 
 func TestMemoryTokenStoreValidateExpired(t *testing.T) {
 	store := NewMemoryTokenStore()
 	email := "test@example.com"
-	expiresAt := time.Now().Add(-1 * time.Minute) // Already expired
+	expiresAt := time.Now().Add(-1 * time.Minute)
 
 	token, err := store.Create(email, expiresAt)
 	if err != nil {
 		t.Fatalf("Create failed: %v", err)
 	}
 
-	// Validate expired token
-	_, valid, err := store.Validate(token)
+	_, state, err := store.Validate(token)
 	if err != nil {
 		t.Fatalf("Validate failed: %v", err)
 	}
-
-	if valid {
-		t.Error("Expired token should be invalid")
+	if state != ValidationStateExpired {
+		t.Errorf("Token state mismatch: got %s, want %s", state, ValidationStateExpired)
 	}
 }
 
 func TestMemoryTokenStoreValidateNonExistent(t *testing.T) {
 	store := NewMemoryTokenStore()
 
-	_, valid, err := store.Validate("nonexistent-token")
+	_, state, err := store.Validate("nonexistent-token")
 	if err != nil {
 		t.Fatalf("Validate failed: %v", err)
 	}
-
-	if valid {
-		t.Error("Non-existent token should be invalid")
+	if state != ValidationStateInvalid {
+		t.Errorf("Token state mismatch: got %s, want %s", state, ValidationStateInvalid)
 	}
 }
 
@@ -147,44 +135,37 @@ func TestMemoryTokenStoreInvalidate(t *testing.T) {
 		t.Fatalf("Create failed: %v", err)
 	}
 
-	// Invalidate token
 	err = store.Invalidate(token)
 	if err != nil {
 		t.Fatalf("Invalidate failed: %v", err)
 	}
 
-	// Validate should fail after invalidation
-	_, valid, err := store.Validate(token)
+	_, state, err := store.Validate(token)
 	if err != nil {
 		t.Fatalf("Validate failed: %v", err)
 	}
-
-	if valid {
-		t.Error("Token should be invalid after Invalidate")
+	if state != ValidationStateUsed {
+		t.Errorf("Token state mismatch: got %s, want %s", state, ValidationStateUsed)
 	}
 }
 
 func TestMemoryTokenStoreCleanup(t *testing.T) {
 	store := NewMemoryTokenStore()
 
-	// Create expired token
 	expiredEmail := "expired@example.com"
 	expiredToken, err := store.Create(expiredEmail, time.Now().Add(-1*time.Minute))
 	if err != nil {
 		t.Fatalf("Create expired token failed: %v", err)
 	}
 
-	// Create valid token
 	validEmail := "valid@example.com"
 	validToken, err := store.Create(validEmail, time.Now().Add(15*time.Minute))
 	if err != nil {
 		t.Fatalf("Create valid token failed: %v", err)
 	}
 
-	// Run cleanup
 	store.Cleanup()
 
-	// Expired token should be removed
 	store.mu.RLock()
 	_, expiredExists := store.tokens[expiredToken]
 	_, validExists := store.tokens[validToken]
@@ -193,7 +174,6 @@ func TestMemoryTokenStoreCleanup(t *testing.T) {
 	if expiredExists {
 		t.Error("Cleanup did not remove expired token")
 	}
-
 	if !validExists {
 		t.Error("Cleanup removed valid token")
 	}
@@ -207,7 +187,6 @@ func TestMemoryTokenStoreConcurrency(t *testing.T) {
 	var wg sync.WaitGroup
 	numGoroutines := 10
 
-	// Create tokens concurrently
 	tokens := make([]string, numGoroutines)
 	for i := 0; i < numGoroutines; i++ {
 		wg.Add(1)
@@ -221,30 +200,26 @@ func TestMemoryTokenStoreConcurrency(t *testing.T) {
 			tokens[idx] = token
 		}(i)
 	}
-
 	wg.Wait()
 
-	// Validate tokens concurrently
-	results := make([]bool, numGoroutines)
+	results := make([]ValidationState, numGoroutines)
 	for i := 0; i < numGoroutines; i++ {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()
-			_, valid, err := store.Validate(tokens[idx])
+			_, state, err := store.Validate(tokens[idx])
 			if err != nil {
 				t.Errorf("Concurrent Validate failed: %v", err)
 				return
 			}
-			results[idx] = valid
+			results[idx] = state
 		}(i)
 	}
-
 	wg.Wait()
 
-	// All validations should succeed (first use)
-	for i, valid := range results {
-		if !valid {
-			t.Errorf("Token %d validation failed", i)
+	for i, state := range results {
+		if state != ValidationStateValid {
+			t.Errorf("Token %d validation state mismatch: got %s", i, state)
 		}
 	}
 }

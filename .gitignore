@@ -40,3 +40,4 @@ package.json
 !website/package.json
 !website/package-lock.json
 .bg-shell/
+.aider*

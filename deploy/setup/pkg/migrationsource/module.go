@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/darkpipe/darkpipe/deploy/setup/pkg/oauthflow"
 	"github.com/darkpipe/darkpipe/deploy/setup/pkg/providers"
 	"github.com/emersion/go-imap/v2/imapclient"
 	"github.com/emersion/go-webdav/caldav"
@@ -71,7 +72,9 @@ func (e ErrUnsupportedCapability) Error() string {
 
 type ErrTemporaryNetwork struct{ Cause error }
 
-func (e ErrTemporaryNetwork) Error() string { return fmt.Sprintf("temporary network error: %v", e.Cause) }
+func (e ErrTemporaryNetwork) Error() string {
+	return fmt.Sprintf("temporary network error: %v", e.Cause)
+}
 
 type DefaultModule struct{}
 
@@ -86,7 +89,7 @@ func (m *DefaultModule) Authenticate(ctx context.Context, provider providers.Pro
 			if err != nil {
 				return classifyError(err)
 			}
-			token, err := runOAuthDeviceFlow(ctx, oauthCfg)
+			token, err := oauthflow.New().RunDeviceFlow(ctx, *oauthCfg, oauthflow.NewPTermUI(), oauthflow.Config{})
 			if err != nil {
 				return classifyError(err)
 			}
@@ -199,21 +202,6 @@ func oauthConfigFor(provider providers.Provider) (*providers.OAuthConfig, error)
 	default:
 		return nil, ErrUnsupportedCapability{Capability: CapabilityAPI}
 	}
-}
-
-func runOAuthDeviceFlow(ctx context.Context, config *providers.OAuthConfig) (*oauth2.Token, error) {
-	pterm.Info.Printf("Initiating OAuth2 device flow for %s...\n", config.ProviderName)
-	token, err := providers.RunDeviceFlow(ctx, config, func(verificationURL, userCode string) {
-		fmt.Println()
-		pterm.DefaultBox.WithTitle("OAuth2 Authorization Required").WithTitleTopCenter().Println(
-			fmt.Sprintf("1. Open this URL in your browser:\n   %s\n\n2. Enter this code:\n   %s\n", verificationURL, userCode),
-		)
-	})
-	if err != nil {
-		return nil, err
-	}
-	pterm.Success.Printf("✓ %s authentication successful\n", config.ProviderName)
-	return token, nil
 }
 
 func setProviderToken(provider providers.Provider, token *oauth2.Token) error {

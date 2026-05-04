@@ -17,9 +17,9 @@ type TokenStore interface {
 	// Create generates a new single-use token for the given email.
 	Create(email string, expiresAt time.Time) (token string, err error)
 
-	// Validate checks if a token is valid and returns the associated email.
+	// Validate checks token state and returns associated email only when valid.
 	// Tokens are single-use: on successful validation, the token is immediately marked as used.
-	Validate(token string) (email string, valid bool, err error)
+	Validate(token string) (email string, state ValidationState, err error)
 
 	// Invalidate marks a token as used (for explicit revocation).
 	Invalidate(token string) error
@@ -27,6 +27,16 @@ type TokenStore interface {
 	// Cleanup removes expired tokens. Should be called periodically.
 	Cleanup()
 }
+
+// ValidationState is the token validation outcome.
+type ValidationState string
+
+const (
+	ValidationStateValid   ValidationState = "valid"
+	ValidationStateInvalid ValidationState = "invalid"
+	ValidationStateExpired ValidationState = "expired"
+	ValidationStateUsed    ValidationState = "used"
+)
 
 // Token represents a single-use QR code token.
 type Token struct {
@@ -85,29 +95,29 @@ func (s *MemoryTokenStore) Create(email string, expiresAt time.Time) (string, er
 
 // Validate checks if a token is valid and returns the associated email.
 // On successful validation, the token is immediately marked as used (single-use enforcement).
-func (s *MemoryTokenStore) Validate(token string) (string, bool, error) {
+func (s *MemoryTokenStore) Validate(token string) (string, ValidationState, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	t, exists := s.tokens[token]
 	if !exists {
-		return "", false, nil
+		return "", ValidationStateInvalid, nil
 	}
 
 	// Check if already used
 	if t.Used {
-		return "", false, nil
+		return "", ValidationStateUsed, nil
 	}
 
 	// Check if expired
 	if time.Now().After(t.ExpiresAt) {
-		return "", false, nil
+		return "", ValidationStateExpired, nil
 	}
 
 	// Mark as used IMMEDIATELY to prevent race conditions
 	t.Used = true
 
-	return t.Email, true, nil
+	return t.Email, ValidationStateValid, nil
 }
 
 // Invalidate marks a token as used (for explicit revocation).
