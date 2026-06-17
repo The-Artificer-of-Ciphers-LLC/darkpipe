@@ -5,6 +5,7 @@ package main
 
 import (
 	"embed"
+	"encoding/base64"
 	"html/template"
 	"log"
 	"net/http"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/darkpipe/darkpipe/profiles/pkg/apppassword"
 	"github.com/darkpipe/darkpipe/profiles/pkg/authpolicy"
+	"github.com/darkpipe/darkpipe/profiles/pkg/mobileconfig"
 	"github.com/darkpipe/darkpipe/profiles/pkg/onboarding"
 	"github.com/darkpipe/darkpipe/profiles/pkg/qrcode"
 )
@@ -149,6 +151,7 @@ func (h *WebUIHandler) processAddDevice(w http.ResponseWriter, r *http.Request, 
 
 	deviceName := r.FormValue("device_name")
 	platform := r.FormValue("platform")
+	suppliedPassword := r.FormValue("app_password")
 
 	if deviceName == "" {
 		h.renderAddDevice(w, email, "Device name is required", false)
@@ -160,41 +163,77 @@ func (h *WebUIHandler) processAddDevice(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 
-	// Generate app password
-	plainPassword, err := apppassword.GenerateAppPassword()
-	if err != nil {
-		log.Printf("Failed to generate app password: %v", err)
-		h.renderAddDevice(w, email, "Failed to generate password", false)
+	if suppliedPassword != "" && (platform == string(onboarding.PlatformIOS) || platform == string(onboarding.PlatformMacOS)) {
+		h.renderAddDevice(w, email, "Supplied app passwords are not supported for profile downloads", false)
 		return
 	}
 
-	// Store app password
-	_, err = h.AppPassStore.Create(email, deviceName, plainPassword)
-	if err != nil {
-		log.Printf("Failed to create app password: %v", err)
-		h.renderAddDevice(w, email, "Failed to save password", false)
-		return
-	}
-
-	setup, err := onboarding.New(nil, h.TokenStore, h.AppPassStore, onboarding.Config{
+	module := onboarding.New(&mobileconfig.ProfileGenerator{}, h.TokenStore, h.AppPassStore, onboarding.Config{
 		Domain:      h.Config.Domain,
 		Hostname:    h.Config.Hostname,
 		CalDAVURL:   h.Config.CalDAVURL,
 		CardDAVURL:  h.Config.CardDAVURL,
 		CalDAVPort:  h.Config.CalDAVPort,
 		CardDAVPort: h.Config.CardDAVPort,
-	}).GeneratePlatformSetup(onboarding.Platform(platform), email, plainPassword)
+	})
+	intent, err := module.IssueSetupIntent(onboarding.SetupIntentInput{
+		Email:      email,
+		DeviceName: deviceName,
+		Platform:   onboarding.Platform(platform),
+	})
 	if err != nil {
-		log.Printf("Failed to generate platform setup: %v", err)
-		h.renderAddDevice(w, email, "Failed to generate setup instructions", false)
+		log.Printf("Failed to issue setup intent: %v", err)
+		h.renderAddDevice(w, email, "Failed to create setup token", false)
 		return
 	}
+	if platform == string(onboarding.PlatformIOS) || platform == string(onboarding.PlatformMacOS) {
+		downloadURL := "https://" + h.Config.Hostname + "/profile/download?token=" + intent.Token
+		png, err := qrcode.GenerateQRCodePNG(downloadURL, 256)
+		if err != nil {
+			log.Printf("Failed to generate setup QR: %v", err)
+			h.renderAddDevice(w, email, "Failed to generate setup QR", false)
+			return
+		}
+		setup := &onboarding.PlatformSetup{
+			Platform:      onboarding.Platform(platform),
+			Title:         "iOS/macOS Setup",
+			Steps:         []string{"Scan the QR code below with your device camera, OR", "Click the \"Download Profile\" button below", "Follow the prompts to install the configuration profile", "Your email, calendar, and contacts will sync automatically"},
+			DownloadLabel: "Download Profile (.mobileconfig)",
+			QRCodeData:    base64.StdEncoding.EncodeToString(png),
+			ProfileURL:    downloadURL,
+			TokenExpiry:   intent.ExpiresAt.Format(time.RFC3339),
+			TokenTTL:      time.Until(intent.ExpiresAt).Round(time.Second).String(),
+		}
+		h.renderAddDeviceResult(w, AddDeviceResultData{
+			Email:         email,
+			DeviceName:    deviceName,
+			Platform:      string(setup.Platform),
+			QRCodeData:    setup.QRCodeData,
+			ProfileURL:    setup.ProfileURL,
+			Title:         setup.Title,
+			Steps:         setup.Steps,
+			DownloadLabel: setup.DownloadLabel,
+			TokenExpiry:   setup.TokenExpiry,
+			TokenTTL:      setup.TokenTTL,
+		})
+		return
+	}
+	consumed, err := module.ConsumeSetupIntent(onboarding.ConsumeSetupInput{
+		Token:               intent.Token,
+		SuppliedAppPassword: suppliedPassword,
+	})
+	if err != nil {
+		log.Printf("Failed to consume setup intent: %v", err)
+		h.renderAddDevice(w, email, "Failed to generate setup", false)
+		return
+	}
+	setup := consumed.Setup
 
 	// Render result page
 	data := AddDeviceResultData{
 		Email:         email,
 		DeviceName:    deviceName,
-		AppPassword:   plainPassword,
+		AppPassword:   consumed.AppPassword,
 		Platform:      string(setup.Platform),
 		QRCodeData:    setup.QRCodeData,
 		ProfileURL:    setup.ProfileURL,
@@ -207,6 +246,10 @@ func (h *WebUIHandler) processAddDevice(w http.ResponseWriter, r *http.Request, 
 		TokenTTL:      setup.TokenTTL,
 	}
 
+	h.renderAddDeviceResult(w, data)
+}
+
+func (h *WebUIHandler) renderAddDeviceResult(w http.ResponseWriter, data AddDeviceResultData) {
 	if err := h.templates.ExecuteTemplate(w, "add_device_result.html", data); err != nil {
 		log.Printf("Template execution error: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)

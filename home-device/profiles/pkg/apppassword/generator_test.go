@@ -1,11 +1,9 @@
 // Copyright (C) 2026 The Artificer of Ciphers, LLC. All rights reserved.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-
 package apppassword
 
 import (
-	"regexp"
 	"strings"
 	"testing"
 )
@@ -16,10 +14,8 @@ func TestGenerateAppPassword_Format(t *testing.T) {
 		t.Fatalf("GenerateAppPassword failed: %v", err)
 	}
 
-	// Check format: XXXX-XXXX-XXXX-XXXX
-	pattern := regexp.MustCompile(`^[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}$`)
-	if !pattern.MatchString(password) {
-		t.Errorf("Password format incorrect: %s", password)
+	if err := ValidateAppPasswordFormat(password); err != nil {
+		t.Fatalf("generated password failed format policy: %v", err)
 	}
 
 	// Check length (19 chars including hyphens)
@@ -70,6 +66,71 @@ func TestGenerateAppPassword_Uniqueness(t *testing.T) {
 			t.Errorf("Duplicate password generated: %s", password)
 		}
 		passwords[password] = true
+	}
+}
+
+func TestValidateAppPasswordFormat(t *testing.T) {
+	tests := []struct {
+		name     string
+		password string
+		wantErr  bool
+	}{
+		{
+			name:     "valid format",
+			password: "ABCD-EFGH-JKLM-NPQR",
+		},
+		{
+			name:     "empty",
+			password: "",
+			wantErr:  true,
+		},
+		{
+			name:     "one group short",
+			password: "ABCD-EFGH-JKLM",
+			wantErr:  true,
+		},
+		{
+			name:     "one character short",
+			password: "ABCD-EFGH-JKLM-NPQ",
+			wantErr:  true,
+		},
+		{
+			name:     "one character long",
+			password: "ABCD-EFGH-JKLM-NPQRR",
+			wantErr:  true,
+		},
+		{
+			name:     "wrong separator",
+			password: "ABCD_EFGH_JKLM_NPQR",
+			wantErr:  true,
+		},
+		{
+			name:     "excluded zero",
+			password: "ABCD-EFGH-JKLM-NPQ0",
+			wantErr:  true,
+		},
+		{
+			name:     "excluded capital O",
+			password: "ABCD-EFGH-JKLM-NPQO",
+			wantErr:  true,
+		},
+		{
+			name:     "lowercase",
+			password: "abcd-efgh-jklm-npqr",
+			wantErr:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateAppPasswordFormat(tt.password)
+			if tt.wantErr && err == nil {
+				t.Fatalf("ValidateAppPasswordFormat(%q) succeeded, want error", tt.password)
+			}
+			if !tt.wantErr && err != nil {
+				t.Fatalf("ValidateAppPasswordFormat(%q) failed: %v", tt.password, err)
+			}
+		})
 	}
 }
 

@@ -22,9 +22,14 @@
         <main id="main-content">
             <div class="success-header">
                 <h2>Device Created: {{.DeviceName}}</h2>
+                {{if .AppPassword}}
                 <p>Your app password has been generated</p>
+                {{else}}
+                <p>Your setup link has been generated</p>
+                {{end}}
             </div>
 
+            {{if .AppPassword}}
             <div class="alert alert-warning" role="alert">
                 <strong>Important:</strong> This is the only time you will see this password. Save it now!
             </div>
@@ -33,6 +38,7 @@
                 <p id="app-password-label"><strong>App Password:</strong></p>
                 <code class="app-password" aria-labelledby="app-password-label">{{.AppPassword}}</code>
             </div>
+            {{end}}
 
             {{if .QRCodeData}}
             <div class="qr-section">

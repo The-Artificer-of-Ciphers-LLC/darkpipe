@@ -50,6 +50,15 @@
                     <p class="help-text" id="platform_hint">We'll provide platform-specific setup instructions</p>
                 </div>
 
+                <div class="form-group">
+                    <label for="app_password">App Password (optional)</label>
+                    <input type="text" id="app_password" name="app_password"
+                           placeholder="XXXX-XXXX-XXXX-XXXX"
+                           pattern="[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}"
+                           aria-describedby="app_password_hint">
+                    <p class="help-text" id="app_password_hint">Leave blank to generate one automatically</p>
+                </div>
+
                 <div class="form-actions">
                     <button type="submit" class="button-primary">Generate Setup</button>
                     <a href="/devices" class="button">Cancel</a>

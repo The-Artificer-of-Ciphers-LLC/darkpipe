@@ -4,10 +4,13 @@
 package qrcode
 
 import (
+	"errors"
 	"sync"
 	"testing"
 	"time"
 )
+
+var errConsumeFailure = errors.New("consume failure")
 
 func TestGenerateSecureToken(t *testing.T) {
 	token1, err := GenerateSecureToken()
@@ -64,6 +67,30 @@ func TestMemoryTokenStoreCreate(t *testing.T) {
 	}
 }
 
+func TestMemoryTokenStoreCreateIntent(t *testing.T) {
+	store := NewMemoryTokenStore()
+	expiresAt := time.Now().Add(15 * time.Minute)
+
+	token, err := store.CreateIntent("test@example.com", "Laptop", "other", expiresAt)
+	if err != nil {
+		t.Fatalf("CreateIntent failed: %v", err)
+	}
+
+	store.mu.RLock()
+	stored, exists := store.tokens[token]
+	store.mu.RUnlock()
+
+	if !exists {
+		t.Fatal("Token not found in store")
+	}
+	if stored.DeviceName != "Laptop" {
+		t.Fatalf("DeviceName = %q, want Laptop", stored.DeviceName)
+	}
+	if stored.Platform != "other" {
+		t.Fatalf("Platform = %q, want other", stored.Platform)
+	}
+}
+
 func TestMemoryTokenStoreValidate(t *testing.T) {
 	store := NewMemoryTokenStore()
 	email := "test@example.com"
@@ -91,6 +118,133 @@ func TestMemoryTokenStoreValidate(t *testing.T) {
 	}
 	if state != ValidationStateUsed {
 		t.Errorf("Token state mismatch after first use: got %s, want %s", state, ValidationStateUsed)
+	}
+}
+
+func TestMemoryTokenStoreConsumeMarksUsedOnSuccess(t *testing.T) {
+	store := NewMemoryTokenStore()
+	token, err := store.CreateIntent("test@example.com", "Laptop", "other", time.Now().Add(15*time.Minute))
+	if err != nil {
+		t.Fatalf("CreateIntent failed: %v", err)
+	}
+
+	_, state, err := store.Consume(token, func(intent Token) error {
+		if intent.Email != "test@example.com" {
+			t.Fatalf("Email = %q, want test@example.com", intent.Email)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("Consume failed: %v", err)
+	}
+	if state != ValidationStateValid {
+		t.Fatalf("state = %s, want valid", state)
+	}
+
+	_, state, err = store.Validate(token)
+	if err != nil {
+		t.Fatalf("Validate failed: %v", err)
+	}
+	if state != ValidationStateUsed {
+		t.Fatalf("state after Consume = %s, want used", state)
+	}
+}
+
+func TestMemoryTokenStoreConsumeLeavesTokenValidOnFailure(t *testing.T) {
+	store := NewMemoryTokenStore()
+	token, err := store.CreateIntent("test@example.com", "Laptop", "other", time.Now().Add(15*time.Minute))
+	if err != nil {
+		t.Fatalf("CreateIntent failed: %v", err)
+	}
+
+	_, state, err := store.Consume(token, func(intent Token) error {
+		return errConsumeFailure
+	})
+	if err != errConsumeFailure {
+		t.Fatalf("err = %v, want errConsumeFailure", err)
+	}
+	if state != ValidationStateValid {
+		t.Fatalf("state = %s, want valid", state)
+	}
+
+	_, state, err = store.Consume(token, func(intent Token) error {
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("second Consume failed: %v", err)
+	}
+	if state != ValidationStateValid {
+		t.Fatalf("state after failed Consume = %s, want valid", state)
+	}
+
+	_, state, err = store.Validate(token)
+	if err != nil {
+		t.Fatalf("Validate failed: %v", err)
+	}
+	if state != ValidationStateUsed {
+		t.Fatalf("state after successful retry = %s, want used", state)
+	}
+}
+
+func TestMemoryTokenStoreConsumeDoesNotCallCallbackForInvalidExpiredOrUsedToken(t *testing.T) {
+	tests := []struct {
+		name      string
+		token     func(t *testing.T, store *MemoryTokenStore) string
+		wantState ValidationState
+	}{
+		{
+			name: "invalid",
+			token: func(t *testing.T, store *MemoryTokenStore) string {
+				return "missing-token"
+			},
+			wantState: ValidationStateInvalid,
+		},
+		{
+			name: "expired",
+			token: func(t *testing.T, store *MemoryTokenStore) string {
+				token, err := store.CreateIntent("test@example.com", "Laptop", "other", time.Now().Add(-time.Minute))
+				if err != nil {
+					t.Fatalf("CreateIntent failed: %v", err)
+				}
+				return token
+			},
+			wantState: ValidationStateExpired,
+		},
+		{
+			name: "used",
+			token: func(t *testing.T, store *MemoryTokenStore) string {
+				token, err := store.CreateIntent("test@example.com", "Laptop", "other", time.Now().Add(15*time.Minute))
+				if err != nil {
+					t.Fatalf("CreateIntent failed: %v", err)
+				}
+				if _, _, err := store.Consume(token, func(intent Token) error { return nil }); err != nil {
+					t.Fatalf("initial Consume failed: %v", err)
+				}
+				return token
+			},
+			wantState: ValidationStateUsed,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store := NewMemoryTokenStore()
+			called := false
+
+			_, state, err := store.Consume(tt.token(t, store), func(intent Token) error {
+				called = true
+				return nil
+			})
+			if err != nil {
+				t.Fatalf("Consume failed: %v", err)
+			}
+			if state != tt.wantState {
+				t.Fatalf("state = %s, want %s", state, tt.wantState)
+			}
+			if called {
+				t.Fatal("Consume callback was called for unavailable token")
+			}
+		})
 	}
 }
 
