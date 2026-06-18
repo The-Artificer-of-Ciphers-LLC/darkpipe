@@ -31,7 +31,12 @@ type WebUIHandler struct {
 
 // NewWebUIHandler creates a new web UI handler
 func NewWebUIHandler(appPassStore apppassword.Store, tokenStore qrcode.TokenStore, config ServerConfig) *WebUIHandler {
-	tmpl, err := template.ParseFS(embedFS, "templates/*.html")
+	tmpl, err := template.ParseFS(
+		embedFS,
+		"templates/add_device.html",
+		"templates/add_device_result.html",
+		"templates/device_list.html",
+	)
 	if err != nil {
 		log.Fatalf("Failed to parse templates: %v", err)
 	}
