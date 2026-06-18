@@ -1,7 +1,6 @@
 // Copyright (C) 2026 The Artificer of Ciphers, LLC. All rights reserved.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-
 package apppassword
 
 import (
@@ -40,6 +39,26 @@ func GenerateAppPassword() (string, error) {
 	}
 
 	return strings.Join(groups, "-"), nil
+}
+
+// ValidateAppPasswordFormat checks the DarkPipe app password format.
+func ValidateAppPasswordFormat(password string) error {
+	if len(password) != passwordLength+3 {
+		return fmt.Errorf("app password must use XXXX-XXXX-XXXX-XXXX format")
+	}
+	for i, ch := range password {
+		switch i {
+		case 4, 9, 14:
+			if ch != '-' {
+				return fmt.Errorf("app password must use XXXX-XXXX-XXXX-XXXX format")
+			}
+		default:
+			if !strings.ContainsRune(charset, ch) {
+				return fmt.Errorf("app password contains invalid character")
+			}
+		}
+	}
+	return nil
 }
 
 // HashPassword hashes a password using bcrypt with cost 12.

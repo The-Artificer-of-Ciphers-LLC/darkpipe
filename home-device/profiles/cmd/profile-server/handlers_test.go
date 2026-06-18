@@ -1,7 +1,6 @@
 // Copyright (C) 2026 The Artificer of Ciphers, LLC. All rights reserved.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-
 package main
 
 import (
@@ -10,6 +9,7 @@ import (
 	"html/template"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -21,7 +21,9 @@ import (
 
 // mockAppPasswordStore is a simple in-memory store for testing.
 type mockAppPasswordStore struct {
-	passwords map[string][]apppassword.AppPassword
+	passwords      map[string][]apppassword.AppPassword
+	plainPasswords []string
+	revoked        []string
 }
 
 func newMockAppPasswordStore() *mockAppPasswordStore {
@@ -31,13 +33,15 @@ func newMockAppPasswordStore() *mockAppPasswordStore {
 }
 
 func (m *mockAppPasswordStore) Create(email, deviceName, plainPassword string) (*apppassword.AppPassword, error) {
+	id := fmt.Sprintf("test-id-%d", len(m.plainPasswords)+1)
 	ap := &apppassword.AppPassword{
-		ID:         "test-id",
+		ID:         id,
 		Email:      email,
 		DeviceName: deviceName,
 		CreatedAt:  time.Now(),
 	}
 	m.passwords[email] = append(m.passwords[email], *ap)
+	m.plainPasswords = append(m.plainPasswords, plainPassword)
 	return ap, nil
 }
 
@@ -46,6 +50,7 @@ func (m *mockAppPasswordStore) List(email string) ([]apppassword.AppPassword, er
 }
 
 func (m *mockAppPasswordStore) Revoke(id string) error {
+	m.revoked = append(m.revoked, id)
 	return nil
 }
 
@@ -406,6 +411,112 @@ func TestInstructionsHTMLEscaping(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestHandleAddDeviceAndroidUsesSuppliedPasswordAndStoresItImmediately(t *testing.T) {
+	handler := setupTestWebUIHandler()
+	store := handler.AppPassStore.(*mockAppPasswordStore)
+
+	form := "device_name=AndroidPhone&platform=android&app_password=ABCD-EFGH-JKLM-NPQR"
+	req := httptest.NewRequest(http.MethodPost, "/devices/add", strings.NewReader(form))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.SetBasicAuth("test+<script>alert(1)</script>@example.com", "testpass")
+	w := httptest.NewRecorder()
+
+	handler.HandleAddDevice(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("Expected status 200, got %d; body: %s", w.Code, w.Body.String())
+	}
+	if len(store.plainPasswords) != 1 || store.plainPasswords[0] != "ABCD-EFGH-JKLM-NPQR" {
+		t.Fatalf("plainPasswords = %v, want supplied password stored once", store.plainPasswords)
+	}
+	if !strings.Contains(w.Body.String(), "ABCD-EFGH-JKLM-NPQR") {
+		t.Fatal("response did not show the supplied app password")
+	}
+}
+
+func TestHandleAddDeviceIOSDefersPasswordCreationUntilProfileDownload(t *testing.T) {
+	webUI := setupTestWebUIHandler()
+	store := webUI.AppPassStore.(*mockAppPasswordStore)
+
+	form := "device_name=iPhone&platform=ios"
+	req := httptest.NewRequest(http.MethodPost, "/devices/add", strings.NewReader(form))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.SetBasicAuth("test+<script>alert(1)</script>@example.com", "testpass")
+	w := httptest.NewRecorder()
+
+	webUI.HandleAddDevice(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("Expected status 200, got %d; body: %s", w.Code, w.Body.String())
+	}
+	if len(store.plainPasswords) != 0 {
+		t.Fatalf("plainPasswords before token consumption = %v, want none", store.plainPasswords)
+	}
+	if strings.Contains(w.Body.String(), "App Password:") {
+		t.Fatal("deferred iOS setup response exposed an app password before token consumption")
+	}
+
+	token := extractProfileDownloadToken(t, w.Body.String())
+	profileHandler := &ProfileHandler{
+		ProfileGen:   &mobileconfig.ProfileGenerator{},
+		TokenStore:   webUI.TokenStore,
+		AppPassStore: webUI.AppPassStore,
+		Config:       webUI.Config,
+	}
+	downloadReq := httptest.NewRequest(http.MethodGet, "/profile/download?token="+token, nil)
+	downloadW := httptest.NewRecorder()
+
+	profileHandler.HandleProfileDownload(downloadW, downloadReq)
+
+	if downloadW.Code != http.StatusOK {
+		t.Fatalf("Expected profile download status 200, got %d; body: %s", downloadW.Code, downloadW.Body.String())
+	}
+	if len(store.plainPasswords) != 1 {
+		t.Fatalf("plainPasswords after token consumption = %v, want one generated password", store.plainPasswords)
+	}
+	if err := apppassword.ValidateAppPasswordFormat(store.plainPasswords[0]); err != nil {
+		t.Fatalf("generated password failed format policy: %v", err)
+	}
+
+	secondW := httptest.NewRecorder()
+	profileHandler.HandleProfileDownload(secondW, downloadReq)
+	if secondW.Code != http.StatusUnauthorized {
+		t.Fatalf("second profile download status = %d, want 401", secondW.Code)
+	}
+}
+
+func TestHandleAddDeviceIOSRejectsSuppliedPasswordWithoutCreatingCredential(t *testing.T) {
+	handler := setupTestWebUIHandler()
+	store := handler.AppPassStore.(*mockAppPasswordStore)
+
+	form := "device_name=iPhone&platform=ios&app_password=ABCD-EFGH-JKLM-NPQR"
+	req := httptest.NewRequest(http.MethodPost, "/devices/add", strings.NewReader(form))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.SetBasicAuth("test+<script>alert(1)</script>@example.com", "testpass")
+	w := httptest.NewRecorder()
+
+	handler.HandleAddDevice(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("Expected status 200, got %d; body: %s", w.Code, w.Body.String())
+	}
+	if !strings.Contains(w.Body.String(), "Supplied app passwords are not supported for profile downloads") {
+		t.Fatal("response did not explain why supplied password was rejected")
+	}
+	if len(store.plainPasswords) != 0 {
+		t.Fatalf("plainPasswords = %v, want none", store.plainPasswords)
+	}
+}
+
+func extractProfileDownloadToken(t *testing.T, body string) string {
+	t.Helper()
+	matches := regexp.MustCompile(`/profile/download\?token=([A-Za-z0-9_-]+)`).FindStringSubmatch(body)
+	if len(matches) != 2 {
+		t.Fatalf("profile download token not found in body: %s", body)
+	}
+	return matches[1]
 }
 
 func TestExtractEmailFromAutodiscoverXML(t *testing.T) {

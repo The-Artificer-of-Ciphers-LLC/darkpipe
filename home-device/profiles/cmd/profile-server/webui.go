@@ -13,6 +13,7 @@ import (
 
 	"github.com/darkpipe/darkpipe/profiles/pkg/apppassword"
 	"github.com/darkpipe/darkpipe/profiles/pkg/authpolicy"
+	"github.com/darkpipe/darkpipe/profiles/pkg/mobileconfig"
 	"github.com/darkpipe/darkpipe/profiles/pkg/onboarding"
 	"github.com/darkpipe/darkpipe/profiles/pkg/qrcode"
 )
@@ -149,6 +150,7 @@ func (h *WebUIHandler) processAddDevice(w http.ResponseWriter, r *http.Request, 
 
 	deviceName := r.FormValue("device_name")
 	platform := r.FormValue("platform")
+	suppliedPassword := r.FormValue("app_password")
 
 	if deviceName == "" {
 		h.renderAddDevice(w, email, "Device name is required", false)
@@ -160,41 +162,44 @@ func (h *WebUIHandler) processAddDevice(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 
-	// Generate app password
-	plainPassword, err := apppassword.GenerateAppPassword()
+	issued, err := h.onboardingModule().IssueOnboarding(onboarding.OnboardingIssueInput{
+		Email:               email,
+		DeviceName:          deviceName,
+		Platform:            onboarding.Platform(platform),
+		SuppliedAppPassword: suppliedPassword,
+	})
 	if err != nil {
-		log.Printf("Failed to generate app password: %v", err)
-		h.renderAddDevice(w, email, "Failed to generate password", false)
+		if _, ok := err.(onboarding.ErrSuppliedAppPasswordUnsupported); ok {
+			h.renderAddDevice(w, email, "Supplied app passwords are not supported for profile downloads", false)
+			return
+		}
+		log.Printf("Failed to issue setup intent: %v", err)
+		h.renderAddDevice(w, email, "Failed to create setup token", false)
 		return
 	}
-
-	// Store app password
-	_, err = h.AppPassStore.Create(email, deviceName, plainPassword)
-	if err != nil {
-		log.Printf("Failed to create app password: %v", err)
-		h.renderAddDevice(w, email, "Failed to save password", false)
+	if issued.Deferred {
+		setup := issued.Setup
+		h.renderAddDeviceResult(w, AddDeviceResultData{
+			Email:         email,
+			DeviceName:    deviceName,
+			Platform:      string(setup.Platform),
+			QRCodeData:    setup.QRCodeData,
+			ProfileURL:    setup.ProfileURL,
+			Title:         setup.Title,
+			Steps:         setup.Steps,
+			DownloadLabel: setup.DownloadLabel,
+			TokenExpiry:   setup.TokenExpiry,
+			TokenTTL:      setup.TokenTTL,
+		})
 		return
 	}
-
-	setup, err := onboarding.New(nil, h.TokenStore, h.AppPassStore, onboarding.Config{
-		Domain:      h.Config.Domain,
-		Hostname:    h.Config.Hostname,
-		CalDAVURL:   h.Config.CalDAVURL,
-		CardDAVURL:  h.Config.CardDAVURL,
-		CalDAVPort:  h.Config.CalDAVPort,
-		CardDAVPort: h.Config.CardDAVPort,
-	}).GeneratePlatformSetup(onboarding.Platform(platform), email, plainPassword)
-	if err != nil {
-		log.Printf("Failed to generate platform setup: %v", err)
-		h.renderAddDevice(w, email, "Failed to generate setup instructions", false)
-		return
-	}
+	setup := issued.Setup
 
 	// Render result page
 	data := AddDeviceResultData{
 		Email:         email,
 		DeviceName:    deviceName,
-		AppPassword:   plainPassword,
+		AppPassword:   issued.AppPassword,
 		Platform:      string(setup.Platform),
 		QRCodeData:    setup.QRCodeData,
 		ProfileURL:    setup.ProfileURL,
@@ -207,6 +212,10 @@ func (h *WebUIHandler) processAddDevice(w http.ResponseWriter, r *http.Request, 
 		TokenTTL:      setup.TokenTTL,
 	}
 
+	h.renderAddDeviceResult(w, data)
+}
+
+func (h *WebUIHandler) renderAddDeviceResult(w http.ResponseWriter, data AddDeviceResultData) {
 	if err := h.templates.ExecuteTemplate(w, "add_device_result.html", data); err != nil {
 		log.Printf("Template execution error: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -248,6 +257,17 @@ func (h *WebUIHandler) HandleRevokeDevice(w http.ResponseWriter, r *http.Request
 
 func (h *WebUIHandler) authPolicyModule() authpolicy.Module {
 	return authpolicy.New(authpolicy.Config{AdminUser: h.Config.AdminUser, AdminPass: h.Config.AdminPass})
+}
+
+func (h *WebUIHandler) onboardingModule() onboarding.Module {
+	return onboarding.New(&mobileconfig.ProfileGenerator{}, h.TokenStore, h.AppPassStore, onboarding.Config{
+		Domain:      h.Config.Domain,
+		Hostname:    h.Config.Hostname,
+		CalDAVURL:   h.Config.CalDAVURL,
+		CardDAVURL:  h.Config.CardDAVURL,
+		CalDAVPort:  h.Config.CalDAVPort,
+		CardDAVPort: h.Config.CardDAVPort,
+	})
 }
 
 // authenticate checks Basic Auth credentials

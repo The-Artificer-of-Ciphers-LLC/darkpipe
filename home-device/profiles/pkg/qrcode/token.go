@@ -1,7 +1,6 @@
 // Copyright (C) 2026 The Artificer of Ciphers, LLC. All rights reserved.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-
 package qrcode
 
 import (
@@ -17,9 +16,15 @@ type TokenStore interface {
 	// Create generates a new single-use token for the given email.
 	Create(email string, expiresAt time.Time) (token string, err error)
 
+	// CreateIntent generates a single-use token with setup intent metadata.
+	CreateIntent(email, deviceName, platform string, expiresAt time.Time) (token string, err error)
+
 	// Validate checks token state and returns associated email only when valid.
 	// Tokens are single-use: on successful validation, the token is immediately marked as used.
 	Validate(token string) (email string, state ValidationState, err error)
+
+	// Consume runs fn for a valid token and marks it used only when fn succeeds.
+	Consume(token string, fn func(Token) error) (intent Token, state ValidationState, err error)
 
 	// Invalidate marks a token as used (for explicit revocation).
 	Invalidate(token string) error
@@ -40,11 +45,13 @@ const (
 
 // Token represents a single-use QR code token.
 type Token struct {
-	Email     string
-	Token     string
-	ExpiresAt time.Time
-	Used      bool
-	CreatedAt time.Time
+	Email      string
+	Token      string
+	DeviceName string
+	Platform   string
+	ExpiresAt  time.Time
+	Used       bool
+	CreatedAt  time.Time
 }
 
 // MemoryTokenStore is an in-memory implementation of TokenStore with thread safety.
@@ -73,17 +80,24 @@ func NewMemoryTokenStore() *MemoryTokenStore {
 
 // Create generates a new single-use token for the given email.
 func (s *MemoryTokenStore) Create(email string, expiresAt time.Time) (string, error) {
+	return s.CreateIntent(email, "", "", expiresAt)
+}
+
+// CreateIntent generates a single-use token with setup intent metadata.
+func (s *MemoryTokenStore) CreateIntent(email, deviceName, platform string, expiresAt time.Time) (string, error) {
 	token, err := GenerateSecureToken()
 	if err != nil {
 		return "", fmt.Errorf("generate token: %w", err)
 	}
 
 	t := &Token{
-		Email:     email,
-		Token:     token,
-		ExpiresAt: expiresAt,
-		Used:      false,
-		CreatedAt: time.Now(),
+		Email:      email,
+		Token:      token,
+		DeviceName: deviceName,
+		Platform:   platform,
+		ExpiresAt:  expiresAt,
+		Used:       false,
+		CreatedAt:  time.Now(),
 	}
 
 	s.mu.Lock()
@@ -118,6 +132,31 @@ func (s *MemoryTokenStore) Validate(token string) (string, ValidationState, erro
 	t.Used = true
 
 	return t.Email, ValidationStateValid, nil
+}
+
+// Consume runs fn for a valid token and marks it used only when fn succeeds.
+func (s *MemoryTokenStore) Consume(token string, fn func(Token) error) (Token, ValidationState, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	t, exists := s.tokens[token]
+	if !exists {
+		return Token{}, ValidationStateInvalid, nil
+	}
+	if t.Used {
+		return Token{}, ValidationStateUsed, nil
+	}
+	if time.Now().After(t.ExpiresAt) {
+		return Token{}, ValidationStateExpired, nil
+	}
+
+	intent := *t
+	if err := fn(intent); err != nil {
+		return intent, ValidationStateValid, err
+	}
+
+	t.Used = true
+	return intent, ValidationStateValid, nil
 }
 
 // Invalidate marks a token as used (for explicit revocation).

@@ -7,8 +7,12 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
+	"net/url"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/darkpipe/darkpipe/profiles/pkg/onboarding"
@@ -46,7 +50,8 @@ func RunQRCommand(args []string) {
 	}
 
 	if *profileServerURL != "" {
-		log.Println("HTTP API mode not yet implemented, using standalone mode")
+		runServerQRCommand(email, *profileServerURL, *outPath, *jsonOutput)
+		return
 	}
 
 	hostname := os.Getenv("MAIL_HOSTNAME")
@@ -110,6 +115,82 @@ func RunQRCommand(args []string) {
 	fmt.Println("  3. Your device will be configured automatically")
 	fmt.Println()
 	fmt.Println("Note: This token can only be used once and expires in 15 minutes")
+}
+
+func runServerQRCommand(email, profileServerURL, outPath string, jsonOutput bool) {
+	qrURL, err := profileServerQRURL(profileServerURL, email)
+	if err != nil {
+		log.Fatalf("Invalid profile server URL: %v", err)
+	}
+	if outPath == "" {
+		log.Fatalf("Server QR mode requires --out because the profile server returns a PNG artifact")
+	}
+
+	pngData, err := fetchServerQR(qrURL)
+	if err != nil {
+		log.Fatalf("Failed to fetch server QR code: %v", err)
+	}
+	if err := os.WriteFile(outPath, pngData, 0o644); err != nil {
+		log.Fatalf("Failed to write QR code file: %v", err)
+	}
+
+	if jsonOutput {
+		payload := map[string]any{
+			"email":       email,
+			"url":         qrURL,
+			"output_path": outPath,
+		}
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetIndent("", "  ")
+		_ = enc.Encode(payload)
+		return
+	}
+
+	fmt.Printf("QR code saved to: %s\n", outPath)
+	fmt.Printf("URL: %s\n", qrURL)
+}
+
+func profileServerQRURL(profileServerURL, email string) (string, error) {
+	base, err := url.Parse(profileServerURL)
+	if err != nil {
+		return "", err
+	}
+	if base.Scheme == "" || base.Host == "" {
+		return "", fmt.Errorf("expected absolute URL with scheme and host")
+	}
+	base.Path = strings.TrimRight(base.Path, "/") + "/qr/generate"
+	query := base.Query()
+	query.Set("email", email)
+	base.RawQuery = query.Encode()
+	return base.String(), nil
+}
+
+func fetchServerQR(qrURL string) ([]byte, error) {
+	req, err := http.NewRequest(http.MethodGet, qrURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	if adminPass := os.Getenv("ADMIN_PASSWORD"); adminPass != "" {
+		adminUser := os.Getenv("ADMIN_USER")
+		if adminUser == "" {
+			adminUser = "admin"
+		}
+		req.SetBasicAuth(adminUser, adminPass)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("profile server returned %s: %s", resp.Status, strings.TrimSpace(string(body)))
+	}
+	return body, nil
 }
 
 func init() {}

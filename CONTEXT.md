@@ -3,5 +3,6 @@
 ## Domain terms
 
 - **Profile onboarding**: issuing mailbox onboarding artifacts for a user/device on the home device profile server.
-- **Onboarding artifact**: either a `.mobileconfig` payload or a QR PNG that encodes a single-use profile download token URL.
-- **Single-use onboarding token**: a short-lived token consumed exactly once to download a generated `.mobileconfig` artifact.
+- **Profile onboarding issuance**: the single flow that creates a token-backed setup intent for any supported platform; on token consumption it handles app password provisioning (generate by default, or accept a supplied app password that satisfies the DarkPipe app password format policy), consumes the single-use onboarding token, generates the onboarding artifact, rolls back the app password if artifact generation fails, and never persists plaintext app passwords.
+- **Onboarding artifact**: a platform-specific setup payload, such as a `.mobileconfig` payload, QR PNG, autoconfig/autodiscover payload, or manual setup field set, backed by a single-use onboarding token where possible.
+- **Single-use onboarding token**: a short-lived token consumed on first successful retrieval or render of a generated onboarding artifact for any supported platform.
