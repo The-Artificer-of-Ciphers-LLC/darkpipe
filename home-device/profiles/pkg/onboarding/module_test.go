@@ -247,3 +247,108 @@ func TestConsumeSetupIntentMapsInvalidAndExpiredTokensWithoutProvisioning(t *tes
 		})
 	}
 }
+
+func TestIssueOnboardingDefersIOSPasswordCreationUntilProfileDownload(t *testing.T) {
+	store := &testAppPasswordStore{}
+	module, _ := newTestModule(store, &mobileconfig.ProfileGenerator{})
+
+	issued, err := module.IssueOnboarding(OnboardingIssueInput{
+		Email:      "test@example.com",
+		DeviceName: "iPhone",
+		Platform:   PlatformIOS,
+	})
+	if err != nil {
+		t.Fatalf("IssueOnboarding failed: %v", err)
+	}
+	if !issued.Deferred {
+		t.Fatal("Deferred = false, want true")
+	}
+	if issued.AppPassword != "" {
+		t.Fatalf("AppPassword = %q, want empty before token consumption", issued.AppPassword)
+	}
+	if len(store.created) != 0 {
+		t.Fatalf("created passwords = %d, want 0 before token consumption", len(store.created))
+	}
+	if issued.Token == "" || issued.Setup == nil || issued.Setup.ProfileURL == "" || issued.Setup.QRCodeData == "" {
+		t.Fatalf("issued setup missing token/profile URL/QR data: %+v", issued)
+	}
+
+	consumed, err := module.ConsumeSetupIntent(ConsumeSetupInput{Token: issued.Token})
+	if err != nil {
+		t.Fatalf("ConsumeSetupIntent failed: %v", err)
+	}
+	if consumed.AppPassword == "" {
+		t.Fatal("AppPassword after token consumption is empty")
+	}
+	if len(store.created) != 1 {
+		t.Fatalf("created passwords = %d, want 1 after token consumption", len(store.created))
+	}
+}
+
+func TestIssueOnboardingConsumesNonAppleSetupImmediately(t *testing.T) {
+	store := &testAppPasswordStore{}
+	module, _ := newTestModule(store, &mobileconfig.ProfileGenerator{})
+
+	issued, err := module.IssueOnboarding(OnboardingIssueInput{
+		Email:               "test@example.com",
+		DeviceName:          "Android",
+		Platform:            PlatformAndroid,
+		SuppliedAppPassword: "ABCD-EFGH-JKLM-NPQR",
+	})
+	if err != nil {
+		t.Fatalf("IssueOnboarding failed: %v", err)
+	}
+	if issued.Deferred {
+		t.Fatal("Deferred = true, want false")
+	}
+	if issued.AppPassword != "ABCD-EFGH-JKLM-NPQR" {
+		t.Fatalf("AppPassword = %q, want supplied password", issued.AppPassword)
+	}
+	if len(store.plainPasswords) != 1 || store.plainPasswords[0] != "ABCD-EFGH-JKLM-NPQR" {
+		t.Fatalf("plainPasswords = %v, want supplied password stored once", store.plainPasswords)
+	}
+
+	_, err = module.ConsumeSetupIntent(ConsumeSetupInput{Token: issued.Token})
+	var usedErr ErrUsedToken
+	if !errors.As(err, &usedErr) {
+		t.Fatalf("second consume err = %T, want ErrUsedToken", err)
+	}
+}
+
+func TestIssueOnboardingRejectsSuppliedPasswordForProfileDownload(t *testing.T) {
+	store := &testAppPasswordStore{}
+	module, _ := newTestModule(store, &mobileconfig.ProfileGenerator{})
+
+	_, err := module.IssueOnboarding(OnboardingIssueInput{
+		Email:               "test@example.com",
+		DeviceName:          "iPhone",
+		Platform:            PlatformIOS,
+		SuppliedAppPassword: "ABCD-EFGH-JKLM-NPQR",
+	})
+	var unsupported ErrSuppliedAppPasswordUnsupported
+	if !errors.As(err, &unsupported) {
+		t.Fatalf("err = %T, want ErrSuppliedAppPasswordUnsupported", err)
+	}
+	if len(store.created) != 0 {
+		t.Fatalf("created passwords = %d, want 0", len(store.created))
+	}
+}
+
+func TestIssueOnboardingRejectsInvalidSuppliedPasswordBeforeProvisioning(t *testing.T) {
+	store := &testAppPasswordStore{}
+	module, _ := newTestModule(store, &mobileconfig.ProfileGenerator{})
+
+	_, err := module.IssueOnboarding(OnboardingIssueInput{
+		Email:               "test@example.com",
+		DeviceName:          "Android",
+		Platform:            PlatformAndroid,
+		SuppliedAppPassword: "not-valid",
+	})
+	var formatErr ErrInvalidAppPasswordFormat
+	if !errors.As(err, &formatErr) {
+		t.Fatalf("err = %T, want ErrInvalidAppPasswordFormat", err)
+	}
+	if len(store.created) != 0 {
+		t.Fatalf("created passwords = %d, want 0", len(store.created))
+	}
+}

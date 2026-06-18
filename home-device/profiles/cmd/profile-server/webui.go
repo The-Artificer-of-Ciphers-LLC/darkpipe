@@ -5,7 +5,6 @@ package main
 
 import (
 	"embed"
-	"encoding/base64"
 	"html/template"
 	"log"
 	"net/http"
@@ -163,47 +162,23 @@ func (h *WebUIHandler) processAddDevice(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 
-	if suppliedPassword != "" && (platform == string(onboarding.PlatformIOS) || platform == string(onboarding.PlatformMacOS)) {
-		h.renderAddDevice(w, email, "Supplied app passwords are not supported for profile downloads", false)
-		return
-	}
-
-	module := onboarding.New(&mobileconfig.ProfileGenerator{}, h.TokenStore, h.AppPassStore, onboarding.Config{
-		Domain:      h.Config.Domain,
-		Hostname:    h.Config.Hostname,
-		CalDAVURL:   h.Config.CalDAVURL,
-		CardDAVURL:  h.Config.CardDAVURL,
-		CalDAVPort:  h.Config.CalDAVPort,
-		CardDAVPort: h.Config.CardDAVPort,
-	})
-	intent, err := module.IssueSetupIntent(onboarding.SetupIntentInput{
-		Email:      email,
-		DeviceName: deviceName,
-		Platform:   onboarding.Platform(platform),
+	issued, err := h.onboardingModule().IssueOnboarding(onboarding.OnboardingIssueInput{
+		Email:               email,
+		DeviceName:          deviceName,
+		Platform:            onboarding.Platform(platform),
+		SuppliedAppPassword: suppliedPassword,
 	})
 	if err != nil {
+		if _, ok := err.(onboarding.ErrSuppliedAppPasswordUnsupported); ok {
+			h.renderAddDevice(w, email, "Supplied app passwords are not supported for profile downloads", false)
+			return
+		}
 		log.Printf("Failed to issue setup intent: %v", err)
 		h.renderAddDevice(w, email, "Failed to create setup token", false)
 		return
 	}
-	if platform == string(onboarding.PlatformIOS) || platform == string(onboarding.PlatformMacOS) {
-		downloadURL := "https://" + h.Config.Hostname + "/profile/download?token=" + intent.Token
-		png, err := qrcode.GenerateQRCodePNG(downloadURL, 256)
-		if err != nil {
-			log.Printf("Failed to generate setup QR: %v", err)
-			h.renderAddDevice(w, email, "Failed to generate setup QR", false)
-			return
-		}
-		setup := &onboarding.PlatformSetup{
-			Platform:      onboarding.Platform(platform),
-			Title:         "iOS/macOS Setup",
-			Steps:         []string{"Scan the QR code below with your device camera, OR", "Click the \"Download Profile\" button below", "Follow the prompts to install the configuration profile", "Your email, calendar, and contacts will sync automatically"},
-			DownloadLabel: "Download Profile (.mobileconfig)",
-			QRCodeData:    base64.StdEncoding.EncodeToString(png),
-			ProfileURL:    downloadURL,
-			TokenExpiry:   intent.ExpiresAt.Format(time.RFC3339),
-			TokenTTL:      time.Until(intent.ExpiresAt).Round(time.Second).String(),
-		}
+	if issued.Deferred {
+		setup := issued.Setup
 		h.renderAddDeviceResult(w, AddDeviceResultData{
 			Email:         email,
 			DeviceName:    deviceName,
@@ -218,22 +193,13 @@ func (h *WebUIHandler) processAddDevice(w http.ResponseWriter, r *http.Request, 
 		})
 		return
 	}
-	consumed, err := module.ConsumeSetupIntent(onboarding.ConsumeSetupInput{
-		Token:               intent.Token,
-		SuppliedAppPassword: suppliedPassword,
-	})
-	if err != nil {
-		log.Printf("Failed to consume setup intent: %v", err)
-		h.renderAddDevice(w, email, "Failed to generate setup", false)
-		return
-	}
-	setup := consumed.Setup
+	setup := issued.Setup
 
 	// Render result page
 	data := AddDeviceResultData{
 		Email:         email,
 		DeviceName:    deviceName,
-		AppPassword:   consumed.AppPassword,
+		AppPassword:   issued.AppPassword,
 		Platform:      string(setup.Platform),
 		QRCodeData:    setup.QRCodeData,
 		ProfileURL:    setup.ProfileURL,
@@ -291,6 +257,17 @@ func (h *WebUIHandler) HandleRevokeDevice(w http.ResponseWriter, r *http.Request
 
 func (h *WebUIHandler) authPolicyModule() authpolicy.Module {
 	return authpolicy.New(authpolicy.Config{AdminUser: h.Config.AdminUser, AdminPass: h.Config.AdminPass})
+}
+
+func (h *WebUIHandler) onboardingModule() onboarding.Module {
+	return onboarding.New(&mobileconfig.ProfileGenerator{}, h.TokenStore, h.AppPassStore, onboarding.Config{
+		Domain:      h.Config.Domain,
+		Hostname:    h.Config.Hostname,
+		CalDAVURL:   h.Config.CalDAVURL,
+		CardDAVURL:  h.Config.CardDAVURL,
+		CalDAVPort:  h.Config.CalDAVPort,
+		CardDAVPort: h.Config.CardDAVPort,
+	})
 }
 
 // authenticate checks Basic Auth credentials

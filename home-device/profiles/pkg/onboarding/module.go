@@ -72,6 +72,25 @@ type ConsumeSetupInput struct {
 	SuppliedAppPassword string
 }
 
+type OnboardingIssueInput struct {
+	Email               string
+	DeviceName          string
+	Platform            Platform
+	SuppliedAppPassword string
+}
+
+type IssuedOnboarding struct {
+	Email       string
+	DeviceName  string
+	AppPassword string
+	Platform    Platform
+	Setup       *PlatformSetup
+	ProfileData []byte
+	Token       string
+	ExpiresAt   time.Time
+	Deferred    bool
+}
+
 type ConsumedSetup struct {
 	Email       string
 	AppPassword string
@@ -81,6 +100,7 @@ type ConsumedSetup struct {
 }
 
 type Module interface {
+	IssueOnboarding(in OnboardingIssueInput) (*IssuedOnboarding, error)
 	IssueSetupIntent(in SetupIntentInput) (*SetupIntent, error)
 	ConsumeSetupIntent(in ConsumeSetupInput) (*ConsumedSetup, error)
 	GenerateMobileConfigFromToken(token string) ([]byte, string, error)
@@ -123,6 +143,12 @@ func (e ErrInvalidAppPasswordFormat) Error() string {
 	return fmt.Sprintf("invalid app password format: %v", e.Cause)
 }
 
+type ErrSuppliedAppPasswordUnsupported struct{ Platform Platform }
+
+func (e ErrSuppliedAppPasswordUnsupported) Error() string {
+	return fmt.Sprintf("supplied app passwords are not supported for %s setup", e.Platform)
+}
+
 type DefaultModule struct {
 	profileGen *mobileconfig.ProfileGenerator
 	tokens     qrcode.TokenStore
@@ -139,6 +165,64 @@ func New(profileGen *mobileconfig.ProfileGenerator, tokens qrcode.TokenStore, ap
 		config:     cfg,
 		now:        time.Now,
 	}
+}
+
+func (m *DefaultModule) IssueOnboarding(in OnboardingIssueInput) (*IssuedOnboarding, error) {
+	platform := in.Platform
+	if platform == "" {
+		platform = PlatformIOS
+	}
+	if in.SuppliedAppPassword != "" && usesDeferredProfileDownload(platform) {
+		return nil, ErrSuppliedAppPasswordUnsupported{Platform: platform}
+	}
+	if in.SuppliedAppPassword != "" {
+		if err := apppassword.ValidateAppPasswordFormat(in.SuppliedAppPassword); err != nil {
+			return nil, ErrInvalidAppPasswordFormat{Cause: err}
+		}
+	}
+
+	intent, err := m.IssueSetupIntent(SetupIntentInput{
+		Email:      in.Email,
+		DeviceName: in.DeviceName,
+		Platform:   platform,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if usesDeferredProfileDownload(platform) {
+		setup, err := m.generateDeferredProfileSetup(intent)
+		if err != nil {
+			return nil, err
+		}
+		return &IssuedOnboarding{
+			Email:      in.Email,
+			DeviceName: in.DeviceName,
+			Platform:   platform,
+			Setup:      setup,
+			Token:      intent.Token,
+			ExpiresAt:  intent.ExpiresAt,
+			Deferred:   true,
+		}, nil
+	}
+
+	consumed, err := m.ConsumeSetupIntent(ConsumeSetupInput{
+		Token:               intent.Token,
+		SuppliedAppPassword: in.SuppliedAppPassword,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &IssuedOnboarding{
+		Email:       consumed.Email,
+		DeviceName:  in.DeviceName,
+		AppPassword: consumed.AppPassword,
+		Platform:    consumed.Platform,
+		Setup:       consumed.Setup,
+		ProfileData: consumed.ProfileData,
+		Token:       intent.Token,
+		ExpiresAt:   intent.ExpiresAt,
+	}, nil
 }
 
 func (m *DefaultModule) IssueSetupIntent(in SetupIntentInput) (*SetupIntent, error) {
@@ -279,6 +363,27 @@ func (m *DefaultModule) GeneratePlatformSetup(platform Platform, email, appPassw
 	return m.generatePlatformSetup(platform, email, appPassword, true)
 }
 
+func (m *DefaultModule) generateDeferredProfileSetup(intent *SetupIntent) (*PlatformSetup, error) {
+	if !usesDeferredProfileDownload(intent.Platform) {
+		return nil, ErrUnknownPlatform{Platform: string(intent.Platform)}
+	}
+	url := fmt.Sprintf("https://%s/profile/download?token=%s", m.config.Hostname, intent.Token)
+	png, err := qrcode.GenerateQRCodePNG(url, 256)
+	if err != nil {
+		return nil, ErrGenerationFailure{Cause: err}
+	}
+	return &PlatformSetup{
+		Platform:      intent.Platform,
+		Title:         "iOS/macOS Setup",
+		Steps:         deferredProfileSteps(),
+		DownloadLabel: "Download Profile (.mobileconfig)",
+		QRCodeData:    base64.StdEncoding.EncodeToString(png),
+		ProfileURL:    url,
+		TokenExpiry:   intent.ExpiresAt.Format(time.RFC3339),
+		TokenTTL:      time.Until(intent.ExpiresAt).Round(time.Second).String(),
+	}, nil
+}
+
 func (m *DefaultModule) generatePlatformSetup(platform Platform, email, appPassword string, issueAppleToken bool) (*PlatformSetup, error) {
 	host := m.config.Hostname
 	setup := &PlatformSetup{Platform: platform}
@@ -286,10 +391,7 @@ func (m *DefaultModule) generatePlatformSetup(platform Platform, email, appPassw
 	switch platform {
 	case PlatformIOS, PlatformMacOS:
 		setup.Title = "iOS/macOS Setup"
-		setup.Steps = []string{
-			"Follow the prompts to install the configuration profile",
-			"Your email, calendar, and contacts will sync automatically",
-		}
+		setup.Steps = profileInstallSteps()
 		setup.DownloadLabel = "Download Profile (.mobileconfig)"
 		if issueAppleToken {
 			url, expiry, err := m.GenerateQRURL(email)
@@ -300,10 +402,7 @@ func (m *DefaultModule) generatePlatformSetup(platform Platform, email, appPassw
 			if err != nil {
 				return nil, ErrGenerationFailure{Cause: err}
 			}
-			setup.Steps = append([]string{
-				"Scan the QR code below with your device camera, OR",
-				"Click the \"Download Profile\" button below",
-			}, setup.Steps...)
+			setup.Steps = deferredProfileSteps()
 			setup.QRCodeData = base64.StdEncoding.EncodeToString(png)
 			setup.ProfileURL = url
 			setup.TokenExpiry = expiry.Format(time.RFC3339)
@@ -361,4 +460,22 @@ func (m *DefaultModule) generatePlatformSetup(platform Platform, email, appPassw
 	}
 
 	return setup, nil
+}
+
+func usesDeferredProfileDownload(platform Platform) bool {
+	return platform == PlatformIOS || platform == PlatformMacOS
+}
+
+func profileInstallSteps() []string {
+	return []string{
+		"Follow the prompts to install the configuration profile",
+		"Your email, calendar, and contacts will sync automatically",
+	}
+}
+
+func deferredProfileSteps() []string {
+	return append([]string{
+		"Scan the QR code below with your device camera, OR",
+		"Click the \"Download Profile\" button below",
+	}, profileInstallSteps()...)
 }
