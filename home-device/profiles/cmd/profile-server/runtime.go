@@ -191,7 +191,7 @@ func (r *profileRuntime) Run() error {
 		log.Printf("Push monitoring enabled (URL: %s)", r.config.MonitorHealthcheckURL)
 	}
 
-	go startLogParser(ctx, r.config.MonitorLogPath, r.deliveryTracker)
+	go delivery.StartLogIngestion(ctx, r.config.MonitorLogPath, r.deliveryTracker)
 
 	serverErr := make(chan error, 1)
 	go func() {
