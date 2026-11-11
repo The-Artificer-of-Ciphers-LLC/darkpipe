@@ -88,7 +88,7 @@ Active in the community? Help other users in [GitHub Discussions](https://github
 
 ### Prerequisites
 
-- Go 1.25 or later
+- Go 1.26 or later
 - Docker 24+ and Docker Compose v2, **or** Podman 5.3+ with podman-compose
 - Git
 - A text editor or IDE (VS Code, GoLand, etc.)
@@ -215,7 +215,7 @@ func ProcessMessage(msg *SMTPMessage) error {
 **Example:**
 ```dockerfile
 # Build stage
-FROM golang:1.25-alpine AS builder
+FROM golang:1.26-alpine AS builder
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
