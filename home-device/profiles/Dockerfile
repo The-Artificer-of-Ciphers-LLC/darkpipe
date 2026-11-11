@@ -3,7 +3,7 @@
 # Build context: repository root (.)
 
 # Stage 1: Builder
-FROM golang:1.25-alpine AS builder
+FROM golang:1.26-alpine AS builder
 
 WORKDIR /build
 
