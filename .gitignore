@@ -41,3 +41,10 @@ package.json
 !website/package-lock.json
 .bg-shell/
 .aider*
+
+# MemPalace per-project files (issue #185)
+mempalace.yaml
+entities.json
+
+# Memtrace local index/daemon data
+.memdb/

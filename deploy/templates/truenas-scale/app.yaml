@@ -4,9 +4,9 @@ version: "1.0.0"
 train: "community"
 title: "DarkPipe - Self-Hosted Email"
 description: "Cloud-fronted, personal-device-backed email sovereignty. DarkPipe receives mail via a cloud relay and delivers it to your home device over an encrypted WireGuard tunnel, ensuring your email lives on your hardware while remaining fully functional from the outside."
-home: "https://github.com/trek-e/darkpipe"
+home: "https://github.com/The-Artificer-of-Ciphers-LLC/darkpipe"
 sources:
-  - "https://github.com/trek-e/darkpipe"
+  - "https://github.com/The-Artificer-of-Ciphers-LLC/darkpipe"
 icon_url: ""
 categories:
   - "networking"
@@ -19,7 +19,7 @@ categories:
 services:
   # Cloud relay service (run this on a VPS with port 25 open)
   cloud-relay:
-    image: ghcr.io/trek-e/darkpipe/cloud-relay:latest
+    image: ghcr.io/The-Artificer-of-Ciphers-LLC/darkpipe/cloud-relay:latest
     container_name: darkpipe-relay
     ports:
       - "25:25"
@@ -62,7 +62,7 @@ services:
 
   # Home mail server (choose via mail_server parameter)
   mail-server:
-    image: "ghcr.io/trek-e/darkpipe/home-{{ .Values.mail_server }}:latest"
+    image: "ghcr.io/The-Artificer-of-Ciphers-LLC/darkpipe/home-{{ .Values.mail_server }}:latest"
     container_name: darkpipe-mailserver
     ports:
       - "25:25"

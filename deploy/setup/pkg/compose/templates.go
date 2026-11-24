@@ -11,7 +11,7 @@ import (
 // cloudRelayService returns the cloud relay service configuration
 func cloudRelayService(cfg *config.Config) *ComposeService {
 	return &ComposeService{
-		Image:         "ghcr.io/trek-e/darkpipe/cloud-relay:${VERSION:-latest}",
+		Image:         "ghcr.io/The-Artificer-of-Ciphers-LLC/darkpipe/cloud-relay:${VERSION:-latest}",
 		ContainerName: "darkpipe-relay",
 		Restart:       "unless-stopped",
 		Ports:         []string{"25:25"},
@@ -57,10 +57,10 @@ func cloudRelayService(cfg *config.Config) *ComposeService {
 // stalwartService returns the Stalwart mail server service configuration
 func stalwartService(cfg *config.Config) *ComposeService {
 	return &ComposeService{
-		Image:         "ghcr.io/trek-e/darkpipe/home-stalwart:${VERSION:-latest}",
+		Image:         "ghcr.io/The-Artificer-of-Ciphers-LLC/darkpipe/home-stalwart:${VERSION:-latest}",
 		ContainerName: "stalwart",
 		Restart:       "unless-stopped",
-		Ports:         []string{"25:25", "587:587", "993:993", "8080:8080"},
+		Ports:         []string{"25:25", "587:587", "993:993", "8081:8080"}, // host 8081: host 8080 is used by webmail
 		Environment: map[string]string{
 			"MAIL_DOMAIN":        cfg.MailDomain,
 			"MAIL_HOSTNAME":      cfg.RelayHostname,
@@ -91,7 +91,7 @@ func stalwartService(cfg *config.Config) *ComposeService {
 // maddyService returns the Maddy mail server service configuration
 func maddyService(cfg *config.Config) *ComposeService {
 	return &ComposeService{
-		Image:         "ghcr.io/trek-e/darkpipe/home-maddy:${VERSION:-latest}",
+		Image:         "ghcr.io/The-Artificer-of-Ciphers-LLC/darkpipe/home-maddy:${VERSION:-latest}",
 		ContainerName: "maddy",
 		Restart:       "unless-stopped",
 		Ports:         []string{"25:25", "587:587", "993:993"},
@@ -122,7 +122,7 @@ func maddyService(cfg *config.Config) *ComposeService {
 // postfixDovecotService returns the Postfix+Dovecot mail server service configuration
 func postfixDovecotService(cfg *config.Config) *ComposeService {
 	return &ComposeService{
-		Image:         "ghcr.io/trek-e/darkpipe/home-postfix-dovecot:${VERSION:-latest}",
+		Image:         "ghcr.io/The-Artificer-of-Ciphers-LLC/darkpipe/home-postfix-dovecot:${VERSION:-latest}",
 		ContainerName: "postfix-dovecot",
 		Restart:       "unless-stopped",
 		Ports:         []string{"25:25", "587:587", "993:993"},

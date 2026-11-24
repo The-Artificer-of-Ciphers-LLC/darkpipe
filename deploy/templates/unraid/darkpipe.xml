@@ -1,19 +1,19 @@
 <?xml version="1.0"?>
 <Container version="2">
   <Name>DarkPipe-CloudRelay</Name>
-  <Repository>ghcr.io/trek-e/darkpipe/cloud-relay:latest</Repository>
-  <Registry>https://ghcr.io/trek-e/darkpipe</Registry>
+  <Repository>ghcr.io/The-Artificer-of-Ciphers-LLC/darkpipe/cloud-relay:latest</Repository>
+  <Registry>https://ghcr.io/The-Artificer-of-Ciphers-LLC/darkpipe</Registry>
   <Network>bridge</Network>
   <Privileged>false</Privileged>
-  <Support>https://github.com/trek-e/darkpipe/discussions</Support>
-  <Project>https://github.com/trek-e/darkpipe</Project>
+  <Support>https://github.com/The-Artificer-of-Ciphers-LLC/darkpipe/discussions</Support>
+  <Project>https://github.com/The-Artificer-of-Ciphers-LLC/darkpipe</Project>
   <Overview>DarkPipe - Self-hosted email sovereignty. Cloud relay receives mail via SMTP and forwards it to your home device over an encrypted WireGuard tunnel. Your email lives on your hardware, encrypted in transit, never stored on someone else's server.&#xD;
 &#xD;
-NOTE: This template covers the cloud-relay component only (for VPS deployment). For the complete home mail server stack, use the Docker Compose plugin with the full DarkPipe compose file. See: https://github.com/trek-e/darkpipe/tree/main/deploy/platform-guides/unraid.md</Overview>
+NOTE: This template covers the cloud-relay component only (for VPS deployment). For the complete home mail server stack, use the Docker Compose plugin with the full DarkPipe compose file. See: https://github.com/The-Artificer-of-Ciphers-LLC/darkpipe/tree/main/deploy/platform-guides/unraid.md</Overview>
   <Category>Network:Email ProductivityTools:</Category>
   <WebUI></WebUI>
-  <TemplateURL>https://raw.githubusercontent.com/trek-e/darkpipe/main/deploy/templates/unraid/darkpipe.xml</TemplateURL>
-  <Icon>https://raw.githubusercontent.com/trek-e/darkpipe/main/docs/icon.png</Icon>
+  <TemplateURL>https://raw.githubusercontent.com/The-Artificer-of-Ciphers-LLC/darkpipe/main/deploy/templates/unraid/darkpipe.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/The-Artificer-of-Ciphers-LLC/darkpipe/main/docs/icon.png</Icon>
   <ExtraParams>--cap-add=NET_ADMIN --device=/dev/net/tun</ExtraParams>
   <DateInstalled></DateInstalled>
   <Description>DarkPipe - Self-hosted email sovereignty. Cloud relay receives mail via SMTP and forwards it to your home device over an encrypted WireGuard tunnel.</Description>

@@ -277,7 +277,7 @@ if [ -f "deploy/templates/truenas-scale/app.yaml" ]; then
     fi
 
     # Check for GHCR image references
-    if grep -q "ghcr.io/trek-e/darkpipe" deploy/templates/truenas-scale/app.yaml; then
+    if grep -q "ghcr.io/The-Artificer-of-Ciphers-LLC/darkpipe" deploy/templates/truenas-scale/app.yaml; then
         print_pass "TrueNAS template references GHCR images"
     else
         print_fail "TrueNAS template doesn't reference GHCR images"
@@ -314,7 +314,7 @@ if [ -f "deploy/templates/unraid/darkpipe.xml" ]; then
     fi
 
     # Check for GHCR image references
-    if grep -q "ghcr.io/trek-e/darkpipe" deploy/templates/unraid/darkpipe.xml; then
+    if grep -q "ghcr.io/The-Artificer-of-Ciphers-LLC/darkpipe" deploy/templates/unraid/darkpipe.xml; then
         print_pass "Unraid template references GHCR images"
     else
         print_fail "Unraid template doesn't reference GHCR images"
