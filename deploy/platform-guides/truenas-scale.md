@@ -112,7 +112,7 @@ cd /mnt/pool/apps/darkpipe
 
 ```bash
 # For x64 systems (most TrueNAS installations)
-curl -LO https://github.com/trek-e/darkpipe/releases/latest/download/darkpipe-setup-linux-amd64
+curl -LO https://github.com/The-Artificer-of-Ciphers-LLC/darkpipe/releases/latest/download/darkpipe-setup-linux-amd64
 chmod +x darkpipe-setup-linux-amd64
 
 # Run setup

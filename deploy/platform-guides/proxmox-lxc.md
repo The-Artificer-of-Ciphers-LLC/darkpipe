@@ -27,7 +27,7 @@ Deploy DarkPipe in a Proxmox LXC container for lightweight virtualization.
 curl -fsSL https://get.docker.com | sh
 
 # 3. Download setup tool and deploy
-curl -LO https://github.com/trek-e/darkpipe/releases/latest/download/darkpipe-setup-linux-amd64
+curl -LO https://github.com/The-Artificer-of-Ciphers-LLC/darkpipe/releases/latest/download/darkpipe-setup-linux-amd64
 chmod +x darkpipe-setup-linux-amd64
 ./darkpipe-setup-linux-amd64 setup
 docker compose up -d
@@ -126,7 +126,7 @@ mkdir -p /opt/darkpipe
 cd /opt/darkpipe
 
 # Download setup tool
-curl -LO https://github.com/trek-e/darkpipe/releases/latest/download/darkpipe-setup-linux-amd64
+curl -LO https://github.com/The-Artificer-of-Ciphers-LLC/darkpipe/releases/latest/download/darkpipe-setup-linux-amd64
 chmod +x darkpipe-setup-linux-amd64
 
 # Run setup wizard

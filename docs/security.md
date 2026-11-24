@@ -18,7 +18,7 @@ The cloud relay is intentionally designed as a pass-through gateway. Mail arrive
 2. **Encrypted transport at all times**
    - Internet to cloud: TLS (Let's Encrypt certificates)
    - Cloud to home: WireGuard full tunnel OR mTLS
-   - Home to clients: TLS (IMAPS port 993, SMTPS port 465/587)
+   - Home to clients: TLS (IMAPS port 993, SMTP submission 587/STARTTLS) — served via the relay's Caddy
 
 3. **Internal PKI for certificate management**
    - step-ca provides internal certificate authority
@@ -141,14 +141,14 @@ bash scripts/verify-log-redaction.sh
 
 ### Internet to Cloud Relay
 
-**Protocol:** TLS 1.2+ (STARTTLS on port 25, implicit TLS on port 465)
+**Protocol:** TLS 1.2+ (STARTTLS on port 25; the relay exposes only port 25 — submission ports 465/587 live on the home device)
 
-**Certificates:** Let's Encrypt via Certbot (automatic renewal)
+**Certificates:** Let's Encrypt via the certbot sidecar (separate compose file; the relay container reloads Postfix automatically when a new certificate appears)
 
 **Configuration:**
-- TLS required on all inbound SMTP connections
-- Optional strict mode: reject connections that don't support TLS
-- Cipher suites: Modern cipher suite selection (no SSLv3, TLS 1.0, or weak ciphers)
+- Opportunistic TLS by default (`smtpd_tls_security_level = may`)
+- Optional strict mode (`RELAY_STRICT_MODE=true`): generates a Postfix policy map that refuses plaintext-only connections
+- Modern protocol floor: SSLv3, TLS 1.0, and TLS 1.1 disabled in the relay's Postfix configuration
 
 **Monitoring:**
 - Certbot monitors certificate expiry
@@ -201,21 +201,29 @@ DarkPipe supports two transport security options: WireGuard (recommended) or mTL
 - No trusted third party (internal CA)
 - Certificate-based identity
 
-### Home Device to Mail Clients
+### Mail Clients to DarkPipe
 
-**Protocol:** TLS 1.2+ (IMAPS port 993, SMTPS port 465/587)
+Two paths, both encrypted, but reaching different machines:
 
-**Certificates:** Let's Encrypt via Caddy (automatic renewal)
+**HTTPS services (webmail, dashboard, autodiscovery, profile downloads).** Clients use `mail.example.com` (and `autoconfig`/`autodiscover`), which resolve to the **cloud relay**. The relay's Caddy terminates TLS there and proxies the request into the tunnel to the home device — so the home device never needs public HTTPS of its own.
+
+**Certificates:** Let's Encrypt via the relay's Caddy (automatic renewal)
+
+**Mail protocols (IMAP, SMTP submission, CalDAV).** The relay does not proxy these ports into the tunnel, so clients connect **directly to the home device** at the `MAIL_HOSTNAME` address — its LAN address, or a public name with 993/587 forwarded if clients connect from outside the home network.
+
+**Protocol:** TLS 1.2+ (IMAPS port 993, SMTP submission 587/STARTTLS)
+
+**Certificates:** the home mail server's own — Stalwart generates a self-signed certificate by default (clients trust it once, or you mount a Let's Encrypt DNS-01 certificate for `MAIL_HOSTNAME`)
 
 **Configuration:**
 - TLS mandatory on IMAP (no plaintext IMAP on port 143)
 - SMTP submission requires STARTTLS or implicit TLS
 - Modern cipher suites only
 
-**Autodiscovery:**
-- Thunderbird autoconfig.xml served over HTTPS
-- Outlook autodiscover.xml served over HTTPS
-- Apple .mobileconfig signed and served over HTTPS
+**Autodiscovery (served over HTTPS by the relay):**
+- Thunderbird autoconfig at `autoconfig.example.com`
+- Outlook autodiscover at `autodiscover.example.com`
+- Apple .mobileconfig profiles via the profile server (`/profile/download`)
 
 ## Encryption at Rest
 
@@ -288,17 +296,17 @@ example.com. IN TXT "v=spf1 mx -all"
 **Purpose:** Cryptographically sign outbound mail to prove authenticity
 
 **Process:**
-1. Outbound mail is signed with private key (stored on cloud relay)
-2. Public key is published in DNS
-3. Receiving server verifies signature using public key from DNS
+1. Outbound mail is signed by **Rspamd on the home device** (the DKIM private key lives on the home device — never on the cloud relay)
+2. The signed message travels over the transport to the relay, which delivers it
+3. Receiving servers verify the signature against the public key in DNS
 
 **Key size:** 2048-bit RSA (industry standard)
 
-**Rotation:** dns-setup tool supports key rotation (generate new key, update DNS, switch signing key)
+**Keys and selector:** `dns-setup` generates the key pair and publishes the DNS record; the private key must be copied to the home device as `home-device/spam-filter/rspamd/dkim-keys/<domain>.<selector>.key`, and `DKIM_SELECTOR` in `home-device/.env` must match the published selector. Selectors are time-based (`darkpipe-<year>q<quarter>`) to support automated quarterly rotation via `dns-setup --rotate-dkim`.
 
 **Record example:**
 ```
-default._domainkey.example.com. IN TXT "v=DKIM1; k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC..."
+darkpipe-2026q4._domainkey.example.com. IN TXT "v=DKIM1; k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC..."
 ```
 
 ### DMARC (Domain-based Message Authentication, Reporting & Conformance)
@@ -307,12 +315,13 @@ default._domainkey.example.com. IN TXT "v=DKIM1; k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQ
 
 **Record example:**
 ```
-_dmarc.example.com. IN TXT "v=DMARC1; p=quarantine; rua=mailto:postmaster@example.com"
+_dmarc.example.com. IN TXT "v=DMARC1; p=none; sp=quarantine; rua=mailto:postmaster@example.com"
 ```
 
 **Interpretation:**
-- `p=quarantine` - Quarantine mail that fails SPF/DKIM (soft fail)
-- `rua=mailto:postmaster@example.com` - Send aggregate reports to this address
+- `p=none` - Monitor only (the default dns-setup publishes; subdomains still get `sp=quarantine`)
+- `p=quarantine` - Quarantine mail that fails SPF/DKIM
+- `rua=mailto:postmaster@example.com` - Send aggregate reports to this address (set with `--dmarc-rua`)
 
 **Policy options:**
 - `p=none` - Monitor only (no action taken)
@@ -435,10 +444,10 @@ Instead, use one of these private reporting methods:
 **Option 1: Email**
 - Send to: security@darkpipe.org (monitored by maintainers)
 - Include: Detailed description, reproduction steps, impact assessment, suggested fix (if any)
-- PGP key available at: https://darkpipe.org/.well-known/pgp-key.txt (TODO: publish key)
+- PGP key: planned at https://darkpipe.org/.well-known/pgp-key.txt (not yet published)
 
 **Option 2: GitHub Security Advisories**
-- Go to: https://github.com/trek-e/darkpipe/security/advisories
+- Go to: https://github.com/The-Artificer-of-Ciphers-LLC/darkpipe/security/advisories
 - Click "Report a vulnerability"
 - Fill out private vulnerability report form
 - This is preferred for GitHub-hosted projects
@@ -552,13 +561,13 @@ Security updates are released as patch versions (e.g., v1.0.1, v1.0.2).
 - Subscribe to release notifications (GitHub "Watch" > "Releases only")
 
 **Update process:**
-1. Pull new Docker images: `docker pull ghcr.io/trek-e/darkpipe/cloud-relay:vX.Y.Z`
+1. Pull new Docker images: `docker pull ghcr.io/<owner>/darkpipe/cloud-relay:vX.Y.Z` (owner = the repository's GitHub account)
 2. Update docker-compose.yml to reference new version
 3. Restart services: `docker compose up -d`
 4. Verify services are healthy: `docker compose ps`
 
 ---
 
-Last Updated: 2026-03-12
+Last Updated: 2026-11-23
 
 License: AGPLv3 - See [LICENSE](../LICENSE)

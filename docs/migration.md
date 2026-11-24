@@ -4,14 +4,17 @@ This guide covers migrating existing email from 7 popular providers to your Dark
 
 ## Overview
 
-DarkPipe includes a mail migration tool that uses IMAP to copy messages from your current email provider to your new DarkPipe mail server. The tool:
+DarkPipe includes a mail migration tool (`darkpipe-setup migrate`) that copies **mail, contacts, and calendars** from your current provider to your DarkPipe installation. The tool:
 
-- Copies all messages and folders from source to destination
+- Copies messages and folders from source to destination
 - Preserves folder structure (with mapping for provider-specific folders)
 - Maintains message flags (read, starred, etc.)
+- Migrates CalDAV calendars and CardDAV contacts where the provider supports them
 - Supports dry-run mode (preview before applying)
-- Shows progress tracking for large mailboxes
-- Handles OAuth2 authentication for Gmail and Outlook (no app passwords needed)
+- Shows progress tracking for large mailboxes, with interrupt/resume
+- Handles OAuth2 device flow for Gmail and Outlook (no app passwords needed)
+
+Full flag reference: [reference/cli.md → darkpipe-setup migrate](reference/cli.md#darkpipe-setup-migrate).
 
 **Important:** Migration does NOT delete mail from the source provider. Your original mail remains untouched.
 
@@ -59,52 +62,49 @@ Download the darkpipe-setup tool, which includes the migrate subcommand:
 
 ```bash
 # Linux (amd64)
-curl -LO https://github.com/trek-e/darkpipe/releases/latest/download/darkpipe-setup-linux-amd64
+curl -LO https://github.com/The-Artificer-of-Ciphers-LLC/darkpipe/releases/latest/download/darkpipe-setup-linux-amd64
 chmod +x darkpipe-setup-linux-amd64
 
 # Linux (arm64)
-curl -LO https://github.com/trek-e/darkpipe/releases/latest/download/darkpipe-setup-linux-arm64
+curl -LO https://github.com/The-Artificer-of-Ciphers-LLC/darkpipe/releases/latest/download/darkpipe-setup-linux-arm64
 chmod +x darkpipe-setup-linux-arm64
 
 # macOS (Intel)
-curl -LO https://github.com/trek-e/darkpipe/releases/latest/download/darkpipe-setup-darwin-amd64
+curl -LO https://github.com/The-Artificer-of-Ciphers-LLC/darkpipe/releases/latest/download/darkpipe-setup-darwin-amd64
 chmod +x darkpipe-setup-darwin-amd64
 
 # macOS (Apple Silicon)
-curl -LO https://github.com/trek-e/darkpipe/releases/latest/download/darkpipe-setup-darwin-arm64
+curl -LO https://github.com/The-Artificer-of-Ciphers-LLC/darkpipe/releases/latest/download/darkpipe-setup-darwin-arm64
 chmod +x darkpipe-setup-darwin-arm64
 ```
 
 ### Step 2: Run Migration Wizard
 
 ```bash
-./darkpipe-setup-linux-amd64 migrate
+./darkpipe-setup-linux-amd64 migrate --from gmail
 ```
 
-The wizard will prompt for:
+Replace `gmail` with your provider (`gmail`, `outlook`, `icloud`, `mailcow`, `mailu`, `docker-mailserver`, `generic`). Running `migrate` without `--from` lists supported providers.
 
-1. **Source provider**: Select from supported providers
-2. **Source authentication**: OAuth2 or credentials depending on provider
-3. **Destination mail server**: Your DarkPipe mail server details
-   - Hostname: mail.example.com
-   - Port: 993 (IMAPS)
-   - Username: your-email@example.com
-   - Password: your DarkPipe password
-4. **Migration options**:
-   - Dry-run (default): Preview what would be migrated
-   - Folder mapping: Customize folder name mapping
-   - Message limit: Migrate only recent messages (optional)
+The wizard then walks you through authentication:
+
+1. **Source authentication** — provider-specific prompts: OAuth2 device flow for Gmail/Outlook, app-specific password for iCloud, IMAP host/port/username/password for self-hosted and generic sources
+2. **Source metadata** — the wizard prints the discovered endpoints and capabilities
+3. **Destination** — your DarkPipe mailbox username and password (or pass `--dest-user` / `--dest-pass` to skip the prompts)
+4. **Dry-run** — a summary of messages, calendar events, and contacts, then a confirmation prompt
+
+Without `--apply`, the run is a dry-run: nothing is written to the destination.
 
 ### Step 3: Review Dry-Run Output
 
-The tool runs in dry-run mode by default, showing:
+The dry-run shows:
 
 - Total messages to migrate
-- Total mailbox size
+- Total calendar events and contacts
 - Folder mapping (source → destination)
-- Estimated time
+- Confirmation prompt (answer yes to continue)
 
-Example output:
+Example output (illustrative):
 ```
 Source: Gmail (user@gmail.com)
 Destination: DarkPipe (user@example.com)
@@ -172,18 +172,13 @@ Gmail uses OAuth2 device flow for authentication, which requires setting up a Go
 #### Run Migration with OAuth2
 
 ```bash
-./darkpipe-setup-linux-amd64 migrate \
-  --provider gmail \
-  --oauth-client-id YOUR_CLIENT_ID \
-  --oauth-client-secret YOUR_CLIENT_SECRET
+export GMAIL_CLIENT_ID=your-client-id
+export GMAIL_CLIENT_SECRET=your-client-secret
+
+./darkpipe-setup-linux-amd64 migrate --from gmail
 ```
 
-The tool will:
-1. Display a URL and device code
-2. Prompt you to visit the URL in a browser
-3. Enter the device code
-4. Authorize DarkPipe Migration app
-5. Migration begins after authorization
+The wizard runs the OAuth2 device flow (RFC 8628): it displays a URL and a device code, you open the URL in a browser and enter the code, and authorize the app in your Google account. The wizard continues automatically once authorization completes. (There are no `--oauth-*` flags — client credentials come from the `GMAIL_CLIENT_ID` / `GMAIL_CLIENT_SECRET` environment variables.)
 
 #### Gmail Folder Mapping
 
@@ -220,25 +215,22 @@ Outlook uses OAuth2 device flow for both personal (outlook.com, hotmail.com) and
    - Supported account types: Personal Microsoft accounts and organizational accounts
    - Redirect URI: (leave blank)
 4. After creation, note Application (client) ID
-5. Certificates & secrets > New client secret
-   - Description: Migration tool
-   - Expiry: 6 months (or longer if needed)
-   - Note the secret value
-6. API permissions:
+5. API permissions:
    - Add a permission > Microsoft Graph > Delegated permissions
-   - Add: Mail.Read, IMAP.AccessAsUser.All
+   - Add: IMAP.AccessAsUser.All (the tool also requests the offline_access scope automatically)
    - Grant admin consent (if organizational account)
 
-#### Run Migration with OAuth2
+   No client secret is needed — the device flow uses a public client.
+
+#### Run Migration
 
 ```bash
-./darkpipe-setup-linux-amd64 migrate \
-  --provider outlook \
-  --oauth-client-id YOUR_CLIENT_ID \
-  --oauth-client-secret YOUR_CLIENT_SECRET
+export OUTLOOK_CLIENT_ID=your-application-client-id
+
+./darkpipe-setup-linux-amd64 migrate --from outlook
 ```
 
-Follow the device code authorization flow (same as Gmail).
+The device code authorization flow works the same as Gmail. Microsoft uses a public client for the device flow, so only the client ID is required (no secret).
 
 #### Outlook Folder Mapping
 
@@ -274,11 +266,10 @@ iCloud uses app-specific passwords for IMAP access.
 #### Run Migration with App-Specific Password
 
 ```bash
-./darkpipe-setup-linux-amd64 migrate \
-  --provider icloud \
-  --source-user your-email@icloud.com \
-  --source-password xxxx-xxxx-xxxx-xxxx
+./darkpipe-setup-linux-amd64 migrate --from icloud
 ```
+
+The wizard prompts for your iCloud email address and the app-specific password.
 
 #### iCloud Folder Mapping
 
@@ -305,19 +296,16 @@ MailCow uses standard IMAP authentication.
 #### Run Migration
 
 ```bash
-./darkpipe-setup-linux-amd64 migrate \
-  --provider mailcow \
-  --source-host mail.yourmailcow.com \
-  --source-port 993 \
-  --source-user your-email@domain.com \
-  --source-password your-password
+./darkpipe-setup-linux-amd64 migrate --from mailcow
 ```
+
+The wizard prompts for the IMAP host, port, username, and password.
 
 #### MailCow Notes
 
 - **IMAP must be enabled** in MailCow mailbox settings
 - **Firewall**: Ensure IMAP port 993 is accessible from your migration location
-- **Self-signed certificates**: Use `--insecure-skip-verify` if MailCow uses self-signed TLS certificate (not recommended for production)
+- **Self-signed certificates**: if the source uses a self-signed certificate, check the wizard's TLS prompt; consider using a properly provisioned certificate for production
 
 ### Mailu
 
@@ -326,13 +314,10 @@ Mailu uses standard IMAP authentication.
 #### Run Migration
 
 ```bash
-./darkpipe-setup-linux-amd64 migrate \
-  --provider mailu \
-  --source-host mail.yourmailu.com \
-  --source-port 993 \
-  --source-user your-email@domain.com \
-  --source-password your-password
+./darkpipe-setup-linux-amd64 migrate --from mailu
 ```
+
+The wizard prompts for the IMAP host, port, username, and password.
 
 #### Mailu Notes
 
@@ -346,13 +331,10 @@ docker-mailserver uses standard IMAP authentication.
 #### Run Migration
 
 ```bash
-./darkpipe-setup-linux-amd64 migrate \
-  --provider docker-mailserver \
-  --source-host mail.yourdomain.com \
-  --source-port 993 \
-  --source-user your-email@domain.com \
-  --source-password your-password
+./darkpipe-setup-linux-amd64 migrate --from docker-mailserver
 ```
+
+The wizard prompts for the IMAP host, port, username, and password.
 
 #### docker-mailserver Notes
 
@@ -366,19 +348,16 @@ For any other IMAP-compliant server not listed above.
 #### Run Migration
 
 ```bash
-./darkpipe-setup-linux-amd64 migrate \
-  --provider generic \
-  --source-host imap.yourprovider.com \
-  --source-port 993 \
-  --source-user your-email@domain.com \
-  --source-password your-password
+./darkpipe-setup-linux-amd64 migrate --from generic
 ```
+
+The wizard prompts for the IMAP host, port, TLS setting, username, and password.
 
 #### Generic IMAP Notes
 
 - **Test connectivity first**: `telnet imap.yourprovider.com 993` should connect
-- **TLS required**: Migration tool requires TLS (port 993, not plain port 143)
-- **Folder names**: Generic provider folder names copied as-is
+- **TLS required**: use port 993 (implicit TLS) or 143 with STARTTLS — the wizard asks which
+- **Folder names**: generic provider folder names are copied as-is
 
 ## Troubleshooting
 
@@ -405,21 +384,20 @@ For any other IMAP-compliant server not listed above.
 **Symptoms:** Migration stalls or times out on folders with many messages.
 
 **Solutions:**
-- Run migration from a system with good network connection (not over VPN)
-- Migrate in batches: `--folder INBOX` to migrate one folder at a time
-- Use `--limit 10000` to migrate only recent messages first, then run again without limit
+- Run migration from a system with a good network connection (not over VPN)
+- Lower `--batch-size` (default 50) so progress checkpoints are more frequent
+- Interrupt and resume: the state file (`--state-file`) tracks completed folders and messages, so you can stop and re-run the same command to continue where it left off
 
 ### Folder Mapping Conflicts
 
 **Symptoms:** Folders created with unexpected names.
 
 **Solutions:**
-- Use `--folder-map` to specify custom mapping:
+- Pass `--folder-map` with one comma-separated value mapping source folder names to destination names:
   ```bash
-  --folder-map "[Gmail]/Sent Mail:Sent" \
-  --folder-map "Work Projects:Work"
+  --folder-map "[Gmail]/Sent Mail:Sent,Work Projects:Work"
   ```
-- Run dry-run first to preview folder mapping
+- Run dry-run first to preview the mapping
 - After migration, manually merge folders via IMAP client if needed
 
 ### Missing Messages
@@ -461,7 +439,7 @@ For any other IMAP-compliant server not listed above.
 
 After migration, update your mail clients (phone, desktop) to connect to DarkPipe:
 
-- See [docs/quickstart.md Step 7](quickstart.md#step-7-onboard-devices) for device onboarding
+- See [Step 7 of the quick start](quickstart.md#step-7-onboard-your-devices) for device onboarding
 - Use profile server for easy configuration
 
 ### Keep Source Provider (Optional)
@@ -497,6 +475,6 @@ This is slower and more manual but works for any IMAP provider.
 
 ---
 
-Last Updated: 2026-02-15
+Last Updated: 2026-11-23
 
 License: AGPLv3 - See [LICENSE](../LICENSE)

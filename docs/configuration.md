@@ -1,607 +1,289 @@
-# DarkPipe Configuration Reference
+# Configuration Reference
 
-Complete reference for all configurable aspects of DarkPipe.
+Reference for every configurable aspect of DarkPipe: environment variables, compose profiles, mail server config files, transport, DNS, queueing, and monitoring.
 
-> **Container Runtime:** All examples use `docker compose` commands. Podman is fully supported via `podman-compose` with override files. See the [Podman platform guide](../deploy/platform-guides/podman.md) for details.
+> **Container runtime:** all examples use `docker compose`. Podman is supported via `podman-compose` with override files — see the [Podman guide](../deploy/platform-guides/podman.md).
 
-## Environment Variable Reference Files
+## Environment Variable Files
 
-Both deployment targets include `.env.example` files documenting all available environment variables with defaults, descriptions, and required/optional markers:
+Both deploy targets ship `.env.example` files that document every variable with its default and a required/optional marker:
 
-- `cloud-relay/.env.example` — All cloud relay variables (relay core, mTLS, TLS monitoring, queue, S3 overflow, Caddy)
-- `home-device/.env.example` — All home device variables (domain, users, mail server, profile server, monitoring, webmail, CalDAV)
+- [`cloud-relay/.env.example`](../cloud-relay/.env.example) — relay core, transport, TLS, queue, S3 overflow, caddy
+- [`home-device/.env.example`](../home-device/.env.example) — domain, users, mail server, profile server, monitoring, webmail, CalDAV, Rspamd
 
-Copy these to `.env` and customize for your deployment:
+Copy and edit them in place:
 
 ```bash
 cp cloud-relay/.env.example cloud-relay/.env
 cp home-device/.env.example home-device/.env
 ```
 
-## Environment Variables
+Environment variables are read from the `.env` file in the same directory as `docker-compose.yml` (docker compose auto-loads it) or exported in the shell.
 
-Environment variables are set in `.env` files alongside `docker-compose.yml` files, or exported in the shell before running docker compose commands.
+## Cloud Relay Variables
 
-### Cloud Relay Variables
+Source: [`cloud-relay/relay/config/config.go`](../cloud-relay/relay/config/config.go) and [`cloud-relay/docker-compose.yml`](../cloud-relay/docker-compose.yml).
 
-**Core Configuration**
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `RELAY_HOSTNAME` | relay.example.com | FQDN of the cloud relay server (must match PTR record) |
-| `RELAY_DOMAIN` | example.com | Primary mail domain |
-| `RELAY_LISTEN_ADDR` | 127.0.0.1:10025 | Address for Go relay service to listen on (receives from Postfix) |
-| `RELAY_TRANSPORT` | wireguard | Transport type: `wireguard` or `mtls` |
-| `RELAY_HOME_ADDR` | 10.8.0.2:25 | Address of home device mail server (via transport tunnel) |
-| `RELAY_MAX_MESSAGE_BYTES` | 52428800 | Maximum message size in bytes (50MB default) |
-| `RELAY_DEBUG` | false | Enable debug logging with full PII (email addresses, tokens) in SMTP session logs |
-
-**WireGuard Transport**
+### Core
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `WIREGUARD_CONFIG` | /etc/wireguard/wg0.conf | Path to WireGuard configuration file |
-| `WIREGUARD_INTERFACE` | wg0 | WireGuard interface name |
+| `RELAY_HOSTNAME` | `relay.example.com` | Public FQDN of the relay. **Must match the PTR record** |
+| `RELAY_DOMAIN` | `example.com` | Primary mail domain |
+| `RELAY_LISTEN_ADDR` | `127.0.0.1:10025` | Address the Go relay daemon listens on (receives from Postfix) |
+| `RELAY_TRANSPORT` | `wireguard` | `wireguard` or `mtls` |
+| `RELAY_HOME_ADDR` | `10.8.0.2:25` | Home device mail endpoint over the transport |
+| `HOME_DEVICE_IP` | `10.8.0.2` | Home device IP on the tunnel; used by the Caddyfile and validation tooling |
+| `RELAY_MAX_MESSAGE_BYTES` | `52428800` | Max inbound message size (50 MiB) |
+| `RELAY_DEBUG` | `false` | Log full email addresses instead of redacted. **Troubleshooting only** |
+| `RELAY_EPHEMERAL_CHECK_INTERVAL` | `60` | Seconds between ephemeral-storage verifications |
 
-**mTLS Transport**
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `RELAY_CA_CERT` | /certs/ca.crt | Path to internal CA certificate |
-| `RELAY_CLIENT_CERT` | /certs/client.crt | Path to client certificate (for cloud relay) |
-| `RELAY_CLIENT_KEY` | /certs/client.key | Path to client private key |
-
-**TLS Monitoring**
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `RELAY_STRICT_MODE` | false | If true, reject connections that don't support TLS |
-| `RELAY_WEBHOOK_URL` | (empty) | Webhook URL for TLS notification alerts |
-
-**Ephemeral Storage Verification**
+### WireGuard transport
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `RELAY_EPHEMERAL_CHECK_INTERVAL` | 60 | Seconds between checks that no mail remains on disk |
+| `WIREGUARD_CONFIG` | `/etc/wireguard/wg0.conf` | Path to the WireGuard config inside the container |
+| `WIREGUARD_INTERFACE` | `wg0` | WireGuard interface name |
 
-**Queue Configuration**
+### mTLS transport
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `RELAY_QUEUE_ENABLED` | true | Enable offline queue (queue vs bounce when home unreachable) |
-| `RELAY_QUEUE_KEY_PATH` | /data/queue-keys/identity | Path to age identity key for queue encryption |
-| `RELAY_QUEUE_SNAPSHOT_PATH` | /data/queue-state/snapshot.json | Path to queue state snapshot |
-| `RELAY_QUEUE_TIMEOUT` | 604800 | Queue timeout in seconds (7 days default) |
+All three are required when `RELAY_TRANSPORT=mtls` (no defaults):
 
-**S3 Overflow Configuration**
+| Variable | Description |
+|----------|-------------|
+| `RELAY_CA_CERT` | Path to the internal CA certificate (e.g. `/certs/ca.crt`) |
+| `RELAY_CLIENT_CERT` | Path to the relay's client certificate |
+| `RELAY_CLIENT_KEY` | Path to the relay's private key |
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `RELAY_OVERFLOW_ENABLED` | false | Enable S3 overflow when local queue exceeds threshold |
-| `RELAY_OVERFLOW_THRESHOLD` | 104857600 | Threshold in bytes before using S3 (100MB default) |
-| `RELAY_OVERFLOW_ENDPOINT` | gateway.storjshare.io | S3-compatible endpoint URL |
-| `RELAY_OVERFLOW_BUCKET` | darkpipe-queue | S3 bucket name |
-| `RELAY_OVERFLOW_ACCESS_KEY` | (required if enabled) | S3 access key ID |
-| `RELAY_OVERFLOW_SECRET_KEY` | (required if enabled) | S3 secret access key |
-| `RELAY_OVERFLOW_REGION` | auto | S3 region (or "auto" for providers that don't need it) |
+Mount the certificate files into the container (e.g. `./certs:/certs:ro`) and set `RELAY_TRANSPORT=mtls`.
 
-**Certbot (Let's Encrypt)**
+### TLS monitoring
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `CERTBOT_EMAIL` | (required) | Email address for Let's Encrypt certificate notifications |
-| `CERTBOT_DOMAINS` | ${RELAY_HOSTNAME} | Comma-separated list of domains for certificate |
+| `RELAY_STRICT_MODE` | `false` | If true, the relay generates a Postfix policy map that refuses plaintext-only connections |
+| `RELAY_WEBHOOK_URL` | *(empty)* | Webhook URL for TLS monitoring alerts |
+| `CERTBOT_EMAIL` | *(empty)* | Contact address for Let's Encrypt (certbot sidecar) |
 
-**Caddy Reverse Proxy**
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `WEBMAIL_DOMAINS` | mail.${RELAY_DOMAIN} | Domains for webmail reverse proxy |
-| `AUTOCONFIG_DOMAINS` | autoconfig.${RELAY_DOMAIN} | Domain for Thunderbird autoconfig |
-| `AUTODISCOVER_DOMAINS` | autodiscover.${RELAY_DOMAIN} | Domain for Outlook autodiscover |
-
-### Home Device Variables
-
-**Core Configuration**
+### Queue (offline buffering)
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `MAIL_DOMAIN` | example.com | Primary mail domain |
-| `MAIL_HOSTNAME` | mail.example.com | FQDN of mail server |
-| `ADMIN_EMAIL` | admin@example.com | Admin email address (first user created) |
-| `ADMIN_PASSWORD` | changeme | Admin password (CHANGE THIS!) |
+| `RELAY_QUEUE_ENABLED` | `true` | `false` = bounce immediately when the home device is unreachable |
+| `RELAY_QUEUE_KEY_PATH` | `/data/queue-keys/identity` | age identity file used to encrypt queued messages |
+| `RELAY_QUEUE_MAX_RAM` | `209715200` | Max in-memory queue size in bytes (200 MiB) |
+| `RELAY_QUEUE_MAX_MESSAGES` | `10000` | Max queued messages |
+| `RELAY_QUEUE_TTL_HOURS` | `168` | Max age before a queued message is purged (7 days) |
+| `RELAY_QUEUE_SNAPSHOT_PATH` | `/data/queue-state/snapshot.json` | Queue metadata snapshot |
 
-**Mail Server Selection**
+### S3 overflow
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `MAIL_SERVER_TYPE` | stalwart | Mail server type: `stalwart`, `maddy`, or `postfix-dovecot` |
-
-**Postfix+Dovecot Specific**
+Spill the queue to object storage when the local queue is full.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `VIRTUAL_DOMAINS` | ${MAIL_DOMAIN} | Comma-separated list of virtual domains |
+| `RELAY_OVERFLOW_ENABLED` | `false` | Enable S3 overflow |
+| `RELAY_OVERFLOW_ENDPOINT` | *(required if enabled)* | S3-compatible endpoint, e.g. `gateway.storjshare.io` |
+| `RELAY_OVERFLOW_BUCKET` | `darkpipe-queue` | Bucket name |
+| `RELAY_OVERFLOW_ACCESS_KEY` | *(required if enabled)* | S3 access key |
+| `RELAY_OVERFLOW_SECRET_KEY` | *(required if enabled)* | S3 secret key |
+| `RELAY_OVERFLOW_USE_SSL` | `true` | Use TLS for S3 connections |
 
-**CalDAV/CardDAV Configuration**
+The entrypoint also supports `_FILE` variants (`RELAY_WEBHOOK_URL_FILE`, `CERTBOT_EMAIL_FILE`, `RELAY_OVERFLOW_ACCESS_KEY_FILE`, `RELAY_OVERFLOW_SECRET_KEY_FILE`) that read the value from a file — useful with docker secrets.
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `CALDAV_URL` | (auto-configured) | CalDAV server URL (for profile generation) |
-| `CARDDAV_URL` | (auto-configured) | CardDAV server URL (for profile generation) |
+### Caddy reverse proxy (cloud relay)
 
-**Stalwart Specific**
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `STALWART_ADMIN_USER` | ${ADMIN_EMAIL} | Admin username for Stalwart web UI |
-| `STALWART_ADMIN_PASSWORD` | ${ADMIN_PASSWORD} | Admin password for Stalwart web UI |
-
-**Profile Server**
+The relay's caddy terminates TLS for `mail.example.com` (the default `WEBMAIL_DOMAINS`) and proxies webmail, autodiscovery, profiles, and the dashboard into the tunnel. These domain names must resolve to the relay: caddy obtains their Let's Encrypt certificates itself, and they are how clients reach everything DarkPipe serves over HTTPS.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `PROFILE_SERVER_PORT` | 8090 | Port for profile server to listen on |
-| `PROFILE_DEBUG` | false | Enable debug logging with full PII (email addresses) in profile server logs |
+| `WEBMAIL_DOMAINS` | `mail.${RELAY_DOMAIN}` | Site block for webmail (proxied to `{$HOME_DEVICE_IP}:8080`) |
+| `AUTOCONFIG_DOMAINS` | `autoconfig.${RELAY_DOMAIN}` | Thunderbird autoconfig site block |
+| `AUTODISCOVER_DOMAINS` | `autodiscover.${RELAY_DOMAIN}` | Outlook autodiscover site block |
+| `ADMIN_USER` / `ADMIN_PASSWORD_HASH` | — | Basic auth for the proxied `/health/*`, `/status*` routes |
 
-**Monitoring Configuration**
+## Home Device Variables
+
+Source: [`home-device/docker-compose.yml`](../home-device/docker-compose.yml) and [`home-device/profiles`](../home-device/profiles/).
+
+### Domain and identity
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `MONITOR_ALERT_EMAIL` | (empty) | Email address for monitoring alerts |
-| `MONITOR_WEBHOOK_URL` | (empty) | Webhook URL for monitoring alerts (Slack, Discord, etc.) |
-| `MONITOR_HEALTHCHECK_URL` | (empty) | Healthcheck.io ping URL for uptime monitoring |
-| `MONITOR_CLI_ALERT_PATH` | /data/monitoring/cli-alerts.json | Path to CLI alert state file |
-| `MONITOR_LOG_PATH` | /var/log/mail.log | Path to mail log for parsing |
-| `MONITOR_CERT_PATHS` | (empty) | Comma-separated paths to certificates to monitor for expiry |
+| `MAIL_DOMAIN` | `example.com` | Primary mail domain (required) |
+| `MAIL_HOSTNAME` | `mail.example.com` | Name placed into onboarding payloads (autoconfig/autodiscover/mobileconfig) — the address your mail clients connect to directly (LAN name, or a public name with 993/587 forwarded). Mail ports are never proxied by the relay, so this is usually *not* the relay hostname. (required) |
+| `ADMIN_EMAIL` | `admin@example.com` | First admin user (required) |
+| `ADMIN_PASSWORD` | `changeme` | Admin password — **change this** (required) |
+| `MAIL_SERVER_TYPE` | `stalwart` | `stalwart`, `maddy`, or `postfix-dovecot` (used by the profile server) |
+| `VIRTUAL_DOMAINS` | — | Comma-separated extra domains (Postfix+Dovecot only) |
 
-**Rspamd Configuration**
+### Profile server
 
-Rspamd is configured via files in `home-device/spam-filter/rspamd/local.d/` and `override.d/`. No environment variables needed for basic operation.
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PROFILE_SERVER_PORT` | `8090` | Port the profile server listens on |
+| `CALDAV_URL` | *(auto for Stalwart)* | CalDAV URL embedded in generated profiles (set for Radicale) |
+| `CARDDAV_URL` | *(auto for Stalwart)* | CardDAV URL embedded in generated profiles (set for Radicale) |
+| `CALDAV_PORT` / `CARDDAV_PORT` | `443` | Ports used when constructing CalDAV/CardDAV URLs |
+| `APP_PASSWORD_STORE_PATH` | `/data/app-passwords.json` | Where the profile server persists app passwords |
+| `PROFILE_DEBUG` | `false` | Log full email addresses in profile server logs. Read directly by the profile server — add it to the `profile-server` service's `environment:` block in the compose file. **Troubleshooting only** |
+| `STALWART_ADMIN_USER` / `STALWART_ADMIN_PASSWORD` | from `ADMIN_EMAIL`/`ADMIN_PASSWORD` | Stalwart management UI credentials (compose passes them through) |
 
-**Redis Configuration**
+### Monitoring
 
-Redis is configured via `home-device/spam-filter/redis/redis.conf`. No environment variables needed.
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MONITOR_ALERT_EMAIL` | *(empty)* | Email address for health alerts |
+| `MONITOR_WEBHOOK_URL` | *(empty)* | Webhook URL for alerts (Slack, Discord, …) |
+| `MONITOR_HEALTHCHECK_URL` | *(empty)* | External uptime pings (e.g. Healthchecks.io) |
+| `MONITOR_CERT_PATHS` | *(empty)* | Comma-separated certificate paths to watch for expiry |
+| `MONITOR_LOG_PATH` | `/var/log/mail.log` | Mail delivery log to parse for delivery status |
+| `MONITOR_CLI_ALERT_PATH` | `/data/monitoring/cli-alerts.json` | CLI alert state file |
+
+### Webmail and CalDAV
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ROUNDCUBEMAIL_DB_TYPE` | `sqlite` | Roundcube database type |
+| `ROUNDCUBEMAIL_UPLOAD_MAX_FILESIZE` | `25M` | Roundcube upload limit |
+| `UPLOAD_MAX_SIZE` | `25M` | SnappyMail upload limit |
+| `LOG_TO_STDOUT` | `true` | SnappyMail log to stdout |
+| `MEMORY_LIMIT` | `128M` | SnappyMail PHP memory limit |
+| `RADICALE_CONFIG` | `/config/config` | Radicale config path |
+| `DKIM_SELECTOR` | `darkpipe` | Rspamd DKIM signing selector — set to the selector published by `dns-setup` (e.g. `darkpipe-2026q4`) |
+
+### Mail server config files
+
+Each mail server reads files under `home-device/` (mounted read-only):
+
+| Mail server | Config file(s) |
+|-------------|----------------|
+| Stalwart | [`home-device/stalwart/config.toml`](../home-device/stalwart/config.toml) — listeners: SMTP 25, submission 587 (STARTTLS), IMAPS 993, management 8080 |
+| Maddy | [`home-device/maddy/maddy.conf`](../home-device/maddy/maddy.conf) |
+| Postfix+Dovecot | [`home-device/postfix-dovecot/`](../home-device/postfix-dovecot/) — `postfix/vmailbox`, `postfix/virtual`, `dovecot/users` |
+| Radicale | [`home-device/caldav-carddav/radicale/`](../home-device/caldav-carddav/radicale/) — `config`, `rights`, `users` |
+| Rspamd | [`home-device/spam-filter/rspamd/local.d/`](../home-device/spam-filter/rspamd/local.d/) — thresholds, greylisting, DKIM signing |
+| Redis | [`home-device/spam-filter/redis/redis.conf`](../home-device/spam-filter/redis/redis.conf) |
 
 ## Container Security Configuration
 
-All compose services are configured with security hardening directives by default. These are set in the compose files and generally should not be modified:
+All compose services carry hardening directives (do not remove them):
 
-- `security_opt: [no-new-privileges:true]` — Prevents privilege escalation
-- `cap_drop: [ALL]` — Drops all Linux capabilities
-- `cap_add: [...]` — Selectively re-adds only required capabilities
-- `read_only: true` — Read-only root filesystem
-- `tmpfs: [...]` — Explicit writable tmpfs mounts
+- `security_opt: [no-new-privileges:true]`
+- `cap_drop: [ALL]` with selective `cap_add` only where required (e.g. `NET_BIND_SERVICE`)
+- `read_only: true` with explicit `tmpfs` mounts for writable paths
+- `HEALTHCHECK` in every custom Dockerfile
 
-All custom Dockerfiles include HEALTHCHECK instructions for container health monitoring.
+Audit them with:
 
-Run `bash scripts/verify-container-security.sh` to audit these directives.
+```bash
+bash scripts/verify-container-security.sh
+bash scripts/verify-log-redaction.sh
+```
 
 ## Compose Profiles
 
-DarkPipe uses compose profiles to select which components to run. Profiles are specified with the `--profile` flag.
+The home device compose file uses profiles. Select exactly one mail server and one webmail; add `radicale` only when the mail server has no built-in CalDAV/CardDAV.
 
-> **Podman users:** When using `podman-compose`, add the override file (`-f docker-compose.podman.yml`) to each command. Override files adjust volume mounts and security options for Podman compatibility. See the [Podman platform guide](../deploy/platform-guides/podman.md).
+| Profile | Component |
+|---------|-----------|
+| `stalwart` | Stalwart 0.15.4 (IMAP4rev2/JMAP, built-in CalDAV/CardDAV) |
+| `maddy` | Maddy 0.8.2 (minimal Go binary) |
+| `postfix-dovecot` | Postfix + Dovecot (traditional) |
+| `roundcube` | Roundcube 1.6.13 |
+| `snappymail` | SnappyMail 2.38.2 |
+| `radicale` | Radicale 3.6.0 (Maddy / Postfix+Dovecot only) |
 
-### Mail Server Profiles
+`rspamd`, `redis`, and `profile-server` always run.
 
-Select exactly one mail server profile:
-
-| Profile | Mail Server | Description |
-|---------|-------------|-------------|
-| `stalwart` | Stalwart 0.15.4 | Modern all-in-one (IMAP4rev2, JMAP, built-in CalDAV/CardDAV) |
-| `maddy` | Maddy 0.8.2 | Minimal Go-based single binary |
-| `postfix-dovecot` | Postfix + Dovecot | Traditional MTA + IMAP (battle-tested) |
-
-### Webmail Profiles
-
-Select exactly one webmail profile:
-
-| Profile | Webmail | Description |
-|---------|---------|-------------|
-| `roundcube` | Roundcube 1.6.13 | Traditional, feature-rich, PHP-based |
-| `snappymail` | SnappyMail 2.38.2 | Modern, fast, lightweight |
-
-### CalDAV/CardDAV Profiles
-
-Select `radicale` profile ONLY if using `maddy` or `postfix-dovecot`. Stalwart has built-in CalDAV/CardDAV.
-
-| Profile | Server | Description |
-|---------|--------|-------------|
-| `radicale` | Radicale 3.6.0 | Standalone CalDAV/CardDAV server (for Maddy/Postfix+Dovecot) |
-
-### Example Profile Combinations
-
-**Default Stack (Stalwart + SnappyMail):**
 ```bash
-docker compose --profile stalwart --profile snappymail up -d
-```
-
-**Conservative Stack (Postfix+Dovecot + Roundcube + Radicale):**
-```bash
+docker compose --profile stalwart --profile snappymail up -d                 # default stack
 docker compose --profile postfix-dovecot --profile roundcube --profile radicale up -d
+docker compose --profile maddy --profile snappymail --profile radicale up -d  # low-RAM stack
 ```
-
-**Minimal Stack (Maddy + SnappyMail + Radicale):**
-```bash
-docker compose --profile maddy --profile snappymail --profile radicale up -d
-```
-
-**Custom (Stalwart + Roundcube, no separate CalDAV server):**
-```bash
-docker compose --profile stalwart --profile roundcube up -d
-```
-
-## Mail Server Configuration
-
-Each mail server has its own configuration files located in the `home-device/` directory.
-
-### Stalwart Configuration
-
-**Config file:** `home-device/stalwart/config.toml`
-
-Key sections:
-
-```toml
-[server]
-hostname = "mail.example.com"
-
-[server.listener."smtp"]
-bind = ["0.0.0.0:25"]
-protocol = "smtp"
-
-[server.listener."submission"]
-bind = ["0.0.0.0:587"]
-protocol = "smtp"
-
-[server.listener."imaps"]
-bind = ["0.0.0.0:993"]
-protocol = "imap"
-
-[server.listener."http"]
-bind = ["0.0.0.0:8080"]
-protocol = "http"
-```
-
-**User management:**
-- Web UI: http://HOME_DEVICE_IP:8080
-- Users, domains, aliases managed via web interface
-
-**CalDAV/CardDAV:**
-- Built-in, enabled by default
-- Access via same credentials as mail
-- URLs: https://mail.example.com/dav/ (CalDAV and CardDAV)
-
-### Maddy Configuration
-
-**Config file:** `home-device/maddy/maddy.conf`
-
-Key sections:
-
-```
-hostname mail.example.com
-
-tls file /data/certs/fullchain.pem /data/certs/privkey.pem
-
-smtp tcp://0.0.0.0:25 {
-    # Inbound SMTP
-}
-
-submission tcp://0.0.0.0:587 {
-    # SMTP submission (authenticated)
-}
-
-imap tcp://0.0.0.0:993 {
-    # IMAP server
-    tls mandatory
-}
-```
-
-**User management:**
-- Edit `home-device/maddy/setup-users.sh`
-- Add user lines: `maddyctl creds create user@example.com`
-- Restart Maddy container: `docker compose restart maddy`
-
-**CalDAV/CardDAV:**
-- NOT built-in, use Radicale profile
-- Add `--profile radicale` when starting containers
-
-### Postfix+Dovecot Configuration
-
-**Postfix config:** `home-device/postfix-dovecot/postfix/`
-**Dovecot config:** `home-device/postfix-dovecot/dovecot/`
-
-Key files:
-
-**Virtual mailboxes:** `home-device/postfix-dovecot/postfix/vmailbox`
-```
-user1@example.com example.com/user1/
-user2@example.com example.com/user2/
-```
-
-**Virtual aliases:** `home-device/postfix-dovecot/postfix/virtual`
-```
-# Aliases
-info@example.com user1@example.com
-sales@example.com user1@example.com
-
-# Catch-all
-@example.com user1@example.com
-```
-
-**Dovecot users:** `home-device/postfix-dovecot/dovecot/users`
-```
-user1@example.com:{PLAIN}password1
-user2@example.com:{PLAIN}password2
-```
-
-**After modifying config files:**
-```bash
-docker compose restart postfix-dovecot
-```
-
-**CalDAV/CardDAV:**
-- NOT built-in, use Radicale profile
 
 ## Transport Configuration
 
-### WireGuard Configuration
+### WireGuard
 
-**Cloud relay:** `/etc/wireguard/wg0.conf`
-```ini
-[Interface]
-Address = 10.8.0.1/24
-PrivateKey = <cloud-private-key>
-ListenPort = 51820
+Config files live at `/etc/wireguard/wg0.conf` on each machine (installed by the setup scripts — see [quick start](quickstart.md#step-2-set-up-the-encrypted-transport)). Cloud: `10.8.0.1/24`, `ListenPort 51820`. Home: `10.8.0.2/24`, `PersistentKeepalive 25`.
 
-[Peer]
-PublicKey = <home-public-key>
-AllowedIPs = 10.8.0.2/32
-```
-
-**Home device:** `/etc/wireguard/wg0.conf`
-```ini
-[Interface]
-Address = 10.8.0.2/24
-PrivateKey = <home-private-key>
-
-[Peer]
-PublicKey = <cloud-public-key>
-Endpoint = YOUR_VPS_IP:51820
-AllowedIPs = 10.8.0.1/32
-PersistentKeepalive = 25
-```
-
-**Management commands:**
 ```bash
-# Start WireGuard
-sudo wg-quick up wg0
-
-# Stop WireGuard
-sudo wg-quick down wg0
-
-# Check status
-sudo wg show
-
-# Enable on boot
-sudo systemctl enable wg-quick@wg0
+sudo wg-quick up wg0      # start
+sudo wg-quick down wg0    # stop
+sudo wg show              # status
 ```
 
-### mTLS Configuration
+### mTLS
 
-**Set environment variables in cloud-relay/.env:**
 ```bash
+# cloud-relay/.env
 RELAY_TRANSPORT=mtls
 RELAY_CA_CERT=/certs/ca.crt
 RELAY_CLIENT_CERT=/certs/relay.crt
 RELAY_CLIENT_KEY=/certs/relay.key
 ```
 
-**Mount certificates in docker-compose.yml:**
-```yaml
-volumes:
-  - ./certs:/certs:ro
+Certificates come from the internal step-ca CA (`deploy/pki/step-ca-setup.sh`); the relay mounts them read-only. Automatic renewal is available via the `cert-renewer@` systemd timer in [`transport/pki/renewal`](../transport/pki/renewal/).
+
+## DNS
+
+The `dns-setup` tool is documented in full in [reference/cli.md](reference/cli.md). Records it manages: MX, A, SPF (`v=spf1 ip4:<relay-ip> -all`), DKIM (time-based selector `<prefix>-<year>q<quarter>`), DMARC (`p=` + `sp=quarantine` + `rua`/`ruf`), mail SRV records, and autoconfig/autodiscover CNAMEs.
+
+## Offline Queue
+
+When the home device is unreachable, inbound mail is encrypted with age and queued; when it reconnects, the queue drains.
+
+- Queue vs bounce: `RELAY_QUEUE_ENABLED` (default `true`)
+- Purge after `RELAY_QUEUE_TTL_HOURS` (default 168 = 7 days)
+- RAM cap `RELAY_QUEUE_MAX_RAM` / message cap `RELAY_QUEUE_MAX_MESSAGES`; beyond that, S3 overflow when enabled
+- The age identity key is generated locally on the relay at `RELAY_QUEUE_KEY_PATH`; public key is derived from it
+
+## Monitoring
+
+- Dashboard: profile server `/status` (Basic auth when proxied via the relay)
+- API: `/status/api`
+- Liveness/readiness: `/health/live`, `/health/ready`
+- Alert channels: `MONITOR_ALERT_EMAIL`, `MONITOR_WEBHOOK_URL`, `MONITOR_HEALTHCHECK_URL`
+- Certificate expiry monitoring: `MONITOR_CERT_PATHS` (alerts within 7 days of expiry)
+- Compose healthchecks: 30 s interval, 10 s timeout, 3 retries (profile server: 5 s timeout, 10 s start period)
+
+## Releases and Custom Builds
+
+### Pre-built images (from releases)
+
+Version tags publish multi-arch images to GitHub Container Registry:
+
+```
+ghcr.io/<owner>/darkpipe/cloud-relay:vX.Y.Z
+ghcr.io/<owner>/darkpipe/home-stalwart:vX.Y.Z-default
+ghcr.io/<owner>/darkpipe/home-postfix-dovecot:vX.Y.Z-conservative
 ```
 
-**Certificate management with step-ca:**
+plus `darkpipe-setup-<os>-<arch>` and `dns-setup-<os>-<arch>` binaries. `<owner>` is the repository's GitHub owner.
 
-Generate certificates:
+### Custom builds
+
+Fork the repository, then run Actions → **Build Custom Stack** with:
+
+- `mail_server`: `stalwart` / `maddy` / `postfix-dovecot`
+- `webmail`: `none` / `roundcube` / `snappymail`
+- `calendar`: `none` / `builtin` / `radicale`
+- `tag_suffix`: optional (e.g. `custom-01`)
+
+It publishes `ghcr.io/<your-fork>/darkpipe/home-<mail_server>:vX.Y.Z[-suffix]` and a matching `cloud-relay` image. Point your compose file's `image:` field at them.
+
+### Updating
+
 ```bash
-# On home device (CA server)
-step ca certificate relay.internal relay.crt relay.key
-
-# Copy to cloud relay
-scp relay.crt relay.key ca.crt user@cloud-relay-vps:/path/to/certs/
-```
-
-Automatic rotation (configured in step-ca):
-- Default: 30 days
-- Configurable: 30, 60, or 90 days
-- Renewal happens automatically via step-ca
-
-## DNS Configuration
-
-### Supported DNS Providers
-
-**Cloudflare (API)**
-- Requires: API token with Zone.DNS.Edit permission
-- Set: `export CLOUDFLARE_API_TOKEN=your_token`
-- Usage: `dns-setup --provider cloudflare --apply`
-
-**AWS Route53 (API)**
-- Requires: AWS credentials with route53:ChangeResourceRecordSets permission
-- Set: `export AWS_ACCESS_KEY_ID=your_key` and `export AWS_SECRET_ACCESS_KEY=your_secret`
-- Usage: `dns-setup --provider route53 --apply`
-
-**Manual (Any Provider)**
-- No credentials needed
-- Usage: `dns-setup` (outputs records to copy manually)
-
-### DNS Records Created
-
-**MX Record:**
-```
-example.com.  IN  MX  10  relay.example.com.
-```
-
-**A Record (for relay):**
-```
-relay.example.com.  IN  A  YOUR_VPS_IP
-```
-
-**SPF Record:**
-```
-example.com.  IN  TXT  "v=spf1 mx -all"
-```
-
-**DKIM Record:**
-```
-default._domainkey.example.com.  IN  TXT  "v=DKIM1; k=rsa; p=PUBKEY_BASE64"
-```
-
-**DMARC Record:**
-```
-_dmarc.example.com.  IN  TXT  "v=DMARC1; p=quarantine; rua=mailto:postmaster@example.com"
-```
-
-### DKIM Key Rotation
-
-Generate new DKIM key:
-```bash
-dns-setup --domain example.com --rotate-dkim
-```
-
-This generates a new key pair and outputs the new DNS record. Update DNS, wait for propagation, then update mail server config.
-
-## Offline Queue Configuration
-
-### Queue Behavior
-
-**Enable queueing (default):**
-```bash
-RELAY_QUEUE_ENABLED=true
-```
-Mail is queued encrypted when home device is offline, delivered when it reconnects.
-
-**Disable queueing (bounce immediately):**
-```bash
-RELAY_QUEUE_ENABLED=false
-```
-Mail is bounced immediately if home device is unreachable.
-
-### Queue Encryption
-
-Queue encryption uses age (filippo.io/age) with a recipient key.
-
-**Key generation (done automatically by setup wizard):**
-```bash
-age-keygen -o /data/queue-keys/identity
-```
-
-Public key is derived from identity and used to encrypt queued messages.
-
-### S3 Overflow
-
-**Enable S3 overflow:**
-```bash
-RELAY_OVERFLOW_ENABLED=true
-RELAY_OVERFLOW_THRESHOLD=104857600  # 100MB
-RELAY_OVERFLOW_ENDPOINT=gateway.storjshare.io
-RELAY_OVERFLOW_BUCKET=darkpipe-queue
-RELAY_OVERFLOW_ACCESS_KEY=your_access_key
-RELAY_OVERFLOW_SECRET_KEY=your_secret_key
-```
-
-**Supported S3 providers:**
-- Storj (recommended, decentralized, $4/TB)
-- AWS S3
-- MinIO (self-hosted)
-- Any S3-compatible service
-
-**How it works:**
-1. Local queue accumulates encrypted messages
-2. When queue size exceeds threshold, overflow to S3
-3. Local queue drains first, then S3 overflow
-4. Messages deleted from S3 after successful delivery
-
-## Monitoring Configuration
-
-### Alert Channels
-
-**Email alerts:**
-```bash
-MONITOR_ALERT_EMAIL=your-email@gmail.com
-```
-
-**Webhook alerts (Slack, Discord, etc.):**
-```bash
-MONITOR_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
-```
-
-**Healthcheck.io integration:**
-```bash
-MONITOR_HEALTHCHECK_URL=https://hc-ping.com/your-uuid-here
-```
-
-### Certificate Monitoring
-
-Monitor custom certificates for expiry:
-```bash
-MONITOR_CERT_PATHS=/etc/letsencrypt/live/example.com/fullchain.pem,/certs/relay.crt
-```
-
-Alerts sent when certificates are within 7 days of expiry.
-
-### Health Check Intervals
-
-Health checks are defined in docker-compose.yml per service:
-
-```yaml
-healthcheck:
-  test: ["CMD", "nc", "-z", "localhost", "25"]
-  interval: 30s   # Check every 30 seconds
-  timeout: 10s    # Timeout after 10 seconds
-  retries: 3      # 3 failures before marking unhealthy
-```
-
-## Custom Builds (GitHub Actions)
-
-Build custom stack images with component selection via GitHub Actions.
-
-### Trigger Custom Build
-
-1. Fork https://github.com/trek-e/darkpipe
-2. Go to Actions > "Build Custom Stack"
-3. Click "Run workflow"
-4. Select components:
-   - Mail server: stalwart, maddy, postfix-dovecot
-   - Webmail: roundcube, snappymail
-   - Groupware: radicale, stalwart-builtin, none
-5. Enter custom tag (e.g., "my-stack")
-6. Run workflow
-
-Resulting image: `ghcr.io/YOUR_USERNAME/darkpipe/home-device:my-stack`
-
-### Use Custom Image
-
-Update docker-compose.yml to use your custom image:
-
-```yaml
-services:
-  # Remove individual service definitions
-  # Use custom combined image instead
-  home-device:
-    image: ghcr.io/YOUR_USERNAME/darkpipe/home-device:my-stack
-    ports:
-      - "25:25"
-      - "587:587"
-      - "993:993"
-      - "8080:8080"
-    # ... rest of config
+docker pull ghcr.io/<owner>/darkpipe/cloud-relay:vX.Y.Z
+cd cloud-relay && docker compose up -d
+# same for the home device image(s)
+docker compose ps   # verify health
 ```
 
 ---
 
-Last Updated: 2026-03-12
+Last Updated: 2026-11-23
 
-License: AGPLv3 - See [LICENSE](../LICENSE)
+License: AGPLv3 — see [LICENSE](../LICENSE)

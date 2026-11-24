@@ -3,9 +3,9 @@
 **Your email. Your hardware. Your rules.**
 
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL%203.0-blue.svg)](LICENSE)
-[![Go Version](https://img.shields.io/badge/Go-1.25-00ADD8?logo=go)](go.mod)
-[![GitHub Release](https://img.shields.io/github/v/release/trek-e/darkpipe)](https://github.com/trek-e/darkpipe/releases)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/trek-e/darkpipe/release.yml)](https://github.com/trek-e/darkpipe/actions)
+[![Go Version](https://img.shields.io/badge/Go-1.26-00ADD8?logo=go)](go.mod)
+[![GitHub Release](https://img.shields.io/github/v/release/The-Artificer-of-Ciphers-LLC/darkpipe)](https://github.com/The-Artificer-of-Ciphers-LLC/darkpipe/releases)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/The-Artificer-of-Ciphers-LLC/darkpipe/release.yml)](https://github.com/The-Artificer-of-Ciphers-LLC/darkpipe/actions)
 [![Platform Support](https://img.shields.io/badge/platform-linux%2Famd64%20%7C%20linux%2Farm64-lightgrey)](deploy/platform-guides/)
 
 DarkPipe is a complete self-hosted email sovereignty stack. A minimal cloud relay handles internet-facing SMTP (receiving and sending), then securely transports messages — without storing them — to a mail server running on hardware you control at home. You choose your mail server, webmail client, and groupware components through a modular build system. The system includes automated DNS authentication, encrypted offline queuing, device onboarding via QR codes and profiles, monitoring with a web dashboard, and migration tools for 7 popular providers.
@@ -17,12 +17,12 @@ Your email lives on your hardware, encrypted in transit, never stored on someone
 ```
 Internet ──> Cloud Relay (VPS) ──[WireGuard/mTLS]──> Home Device (your hardware)
                   │                                           │
-             Postfix MTA                                 Mail Server
-             Certbot TLS                          (Stalwart/Maddy/Postfix+Dovecot)
-             Rspamd Filter                            Webmail + Calendar/Contacts
-             Monitoring                                  Device Profiles
-                                                        Offline Queue
-                                                        Spam Filter
+             Postfix MTA + relay daemon             Mail Server
+             (age-encrypted offline queue —        (Stalwart/Maddy/Postfix+Dovecot)
+              never stores mail)                    Webmail (SnappyMail/Roundcube)
+             Caddy (webmail, autodiscovery,         Calendar/Contacts (Radicale/Stalwart)
+              dashboard — proxied into tunnel)      Rspamd (spam filter, DKIM signing)
+             Certbot (Let's Encrypt)                Profile server (onboarding, dashboard)
 ```
 
 **Data flow:**
@@ -124,25 +124,20 @@ Port 25 (SMTP) is required for sending and receiving email. Many cloud providers
 
 ```bash
 # Download setup tool (replace <OS> and <ARCH> with your platform)
-curl -LO https://github.com/trek-e/darkpipe/releases/latest/download/darkpipe-setup-<OS>-<ARCH>
+curl -LO https://github.com/The-Artificer-of-Ciphers-LLC/darkpipe/releases/latest/download/darkpipe-setup-<OS>-<ARCH>
 
-# Make executable
+# Make executable and run the interactive wizard
 chmod +x darkpipe-setup-<OS>-<ARCH>
-
-# Run interactive wizard
-./darkpipe-setup-<OS>-<ARCH>
+./darkpipe-setup-<OS>-<ARCH> setup
 ```
 
-The wizard will:
-- Collect your domain, mail server choice, webmail choice, transport type
-- Generate docker-compose.yml, .env, and configuration files
-- Provide deployment instructions for cloud relay and home device
+The wizard collects your domain, relay hostname, admin email, mail server, webmail, and transport choices (with live validation), then generates in the current directory: a single `docker-compose.yml` with your selected services, `.darkpipe.yml`, `secrets/admin_password.txt` (a generated 24-character admin password — note it down), and `secrets/dkim_private_key.pem` (a placeholder for the key generated in the DNS step).
 
 ### 3. Configure DNS
 
 ```bash
 # Download DNS setup tool
-curl -LO https://github.com/trek-e/darkpipe/releases/latest/download/dns-setup-<OS>-<ARCH>
+curl -LO https://github.com/The-Artificer-of-Ciphers-LLC/darkpipe/releases/latest/download/dns-setup-<OS>-<ARCH>
 
 # Make executable
 chmod +x dns-setup-<OS>-<ARCH>
@@ -181,23 +176,21 @@ DarkPipe runs on any Docker-capable system. Platform-specific guides available:
 - [Mac Silicon](deploy/platform-guides/mac-silicon.md) (Apple M-series)
 - Any Docker-capable x64 or arm64 Linux host
 
-**Minimum home device requirements:** 2GB RAM (4GB recommended), 20GB storage, Docker 27+
+**Minimum home device requirements:** 2GB RAM (4GB recommended), 20GB storage, Docker 24+ (or Podman 5.3+)
 
 ## Documentation
 
-- [Architecture Overview](docs/architecture.md) - System architecture, components, data flow
-- [Quick Start Guide](docs/quickstart.md) - End-to-end setup from VPS to first email
-- [Configuration Reference](docs/configuration.md) - Complete environment variable and profile guide
-- [Migration Guide](docs/migration.md) - Migrate from 7 popular email providers
-- [Contributing Guide](docs/contributing.md) - Development setup, code conventions, PR process
-- [Security Model](docs/security.md) - Threat model, encryption, vulnerability reporting
-- [FAQ](docs/faq.md) - Frequently asked questions and troubleshooting
+- **Learn** — [First Email tutorial](docs/tutorials/first-email.md): one safe path from zero to your first email, step by step
+- **How to** — [Quick Start](docs/quickstart.md): the full deployment, VPS to first email · [Migration guide](docs/migration.md): import mail from 7 providers · [Platform guides](deploy/platform-guides/): Raspberry Pi, NAS, Proxmox, macOS
+- **Reference** — [Configuration](docs/configuration.md): every variable and profile · [CLI reference](docs/reference/cli.md): `dns-setup` and `darkpipe-setup` · [VPS providers](docs/vps-providers.md): port 25 compatibility
+- **Understand** — [Architecture](docs/architecture.md): the split design and why · [Security model](docs/security.md): threat model and encryption
+- [FAQ](docs/faq.md): common questions and troubleshooting · [Contributing](docs/contributing.md): development setup and conventions
 
 ## Community and Support
 
-**Questions and discussions:** [GitHub Discussions](https://github.com/trek-e/darkpipe/discussions)
+**Questions and discussions:** [GitHub Discussions](https://github.com/The-Artificer-of-Ciphers-LLC/darkpipe/discussions)
 
-**Bug reports:** [GitHub Issues](https://github.com/trek-e/darkpipe/issues)
+**Bug reports:** [GitHub Issues](https://github.com/The-Artificer-of-Ciphers-LLC/darkpipe/issues)
 
 **Contributing:** See [docs/contributing.md](docs/contributing.md)
 

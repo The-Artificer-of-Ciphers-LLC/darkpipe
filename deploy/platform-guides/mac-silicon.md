@@ -36,7 +36,7 @@ For production, deploy cloud relay on a VPS and home device on Linux/Raspberry P
 # 1. Install Docker Desktop or OrbStack (see detailed steps)
 
 # 2. Download and run setup tool
-curl -LO https://github.com/trek-e/darkpipe/releases/latest/download/darkpipe-setup-darwin-arm64
+curl -LO https://github.com/The-Artificer-of-Ciphers-LLC/darkpipe/releases/latest/download/darkpipe-setup-darwin-arm64
 chmod +x darkpipe-setup-darwin-arm64
 ./darkpipe-setup-darwin-arm64 setup
 
@@ -100,7 +100,7 @@ mkdir -p ~/Development/darkpipe
 cd ~/Development/darkpipe
 
 # Download ARM64 macOS setup tool
-curl -LO https://github.com/trek-e/darkpipe/releases/latest/download/darkpipe-setup-darwin-arm64
+curl -LO https://github.com/The-Artificer-of-Ciphers-LLC/darkpipe/releases/latest/download/darkpipe-setup-darwin-arm64
 chmod +x darkpipe-setup-darwin-arm64
 
 # Run setup wizard
@@ -219,7 +219,7 @@ All DarkPipe images are built for `linux/arm64`, which runs natively on Apple Si
 
 **Verify:**
 ```bash
-docker inspect ghcr.io/trek-e/darkpipe/cloud-relay:latest | grep Architecture
+docker inspect ghcr.io/The-Artificer-of-Ciphers-LLC/darkpipe/cloud-relay:latest | grep Architecture
 # Should output: "Architecture": "arm64"
 ```
 

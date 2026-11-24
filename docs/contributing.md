@@ -12,7 +12,7 @@ All contributions must be licensed under AGPLv3 to maintain the project's licens
 
 ### Report Bugs
 
-Found a bug? Report it via [GitHub Issues](https://github.com/trek-e/darkpipe/issues).
+Found a bug? Report it via [GitHub Issues](https://github.com/The-Artificer-of-Ciphers-LLC/darkpipe/issues).
 
 **Good bug reports include:**
 - Clear description of the problem
@@ -29,7 +29,7 @@ Found a bug? Report it via [GitHub Issues](https://github.com/trek-e/darkpipe/is
 
 ### Suggest Features
 
-Have an idea for a new feature? Start a discussion in [GitHub Discussions](https://github.com/trek-e/darkpipe/discussions).
+Have an idea for a new feature? Start a discussion in [GitHub Discussions](https://github.com/The-Artificer-of-Ciphers-LLC/darkpipe/discussions).
 
 **Good feature suggestions include:**
 - Clear description of the feature and its purpose
@@ -77,7 +77,7 @@ DarkPipe supports many platforms, but not all are tested by maintainers.
 
 ### Help Other Users
 
-Active in the community? Help other users in [GitHub Discussions](https://github.com/trek-e/darkpipe/discussions).
+Active in the community? Help other users in [GitHub Discussions](https://github.com/The-Artificer-of-Ciphers-LLC/darkpipe/discussions).
 
 - Answer questions
 - Share your deployment experience
@@ -98,28 +98,35 @@ Run `bash scripts/check-runtime.sh` to validate your container runtime and devel
 ### Clone the Repository
 
 ```bash
-git clone https://github.com/trek-e/darkpipe.git
+git clone https://github.com/The-Artificer-of-Ciphers-LLC/darkpipe.git
 cd darkpipe
 ```
 
 ### Build from Source
 
 **Go services (cloud relay, CLIs):**
+
+The repository contains three Go modules: the root module (relay daemon, `dns-setup`, monitoring, transports), `deploy/setup` (the `darkpipe-setup` wizard, which also provides `migrate`), and `home-device/profiles` (the profile server). Build each from its own directory:
+
 ```bash
-# Build all Go binaries
+# Root module: relay daemon, dns-setup, monitoring, transports
 go build ./...
-
-# Build specific tools
-go build -o darkpipe-setup ./deploy/setup/cmd/darkpipe-setup
 go build -o dns-setup ./dns/cmd/dns-setup
-go build -o migrate ./migration/cmd/migrate
-
-# Run tests
 go test ./...
-
-# Run linters
 go vet ./...
 gofmt -s -w .
+
+# Setup wizard + migration (the deploy/setup module)
+cd deploy/setup
+go build -o darkpipe-setup ./cmd/darkpipe-setup
+go test ./...
+go vet ./...
+cd ..
+
+# Profile server (the home-device/profiles module)
+cd home-device/profiles
+go build ./...
+cd ..
 ```
 
 **Docker images:**
@@ -310,7 +317,7 @@ git push origin feature/your-feature-name
 
 Open a Pull Request on GitHub:
 
-1. Go to https://github.com/trek-e/darkpipe
+1. Go to https://github.com/The-Artificer-of-Ciphers-LLC/darkpipe
 2. Click "Pull requests" > "New pull request"
 3. Click "compare across forks"
 4. Select your fork and branch
@@ -428,14 +435,14 @@ See [LICENSE](../LICENSE) for full license text.
 
 ## Questions?
 
-- General questions: [GitHub Discussions](https://github.com/trek-e/darkpipe/discussions)
-- Bug reports: [GitHub Issues](https://github.com/trek-e/darkpipe/issues)
+- General questions: [GitHub Discussions](https://github.com/The-Artificer-of-Ciphers-LLC/darkpipe/discussions)
+- Bug reports: [GitHub Issues](https://github.com/The-Artificer-of-Ciphers-LLC/darkpipe/issues)
 - Security concerns: See [docs/security.md](security.md)
 
 Thank you for contributing to DarkPipe and helping build a more sovereign internet!
 
 ---
 
-Last Updated: 2026-03-12
+Last Updated: 2026-11-23
 
 License: AGPLv3 - See [LICENSE](../LICENSE)

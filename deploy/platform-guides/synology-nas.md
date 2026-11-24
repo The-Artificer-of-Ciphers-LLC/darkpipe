@@ -56,7 +56,7 @@ mkdir -p /volume1/darkpipe
 cd /volume1/darkpipe
 
 # Download setup tool (x64 for most Synology NAS models)
-curl -LO https://github.com/trek-e/darkpipe/releases/latest/download/darkpipe-setup-linux-amd64
+curl -LO https://github.com/The-Artificer-of-Ciphers-LLC/darkpipe/releases/latest/download/darkpipe-setup-linux-amd64
 chmod +x darkpipe-setup-linux-amd64
 
 # Run setup
@@ -113,7 +113,7 @@ sudo mkdir -p /volume1/darkpipe
 cd /volume1/darkpipe
 
 # Download setup tool
-curl -LO https://github.com/trek-e/darkpipe/releases/latest/download/darkpipe-setup-linux-amd64
+curl -LO https://github.com/The-Artificer-of-Ciphers-LLC/darkpipe/releases/latest/download/darkpipe-setup-linux-amd64
 chmod +x darkpipe-setup-linux-amd64
 
 # Run setup

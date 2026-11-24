@@ -124,16 +124,19 @@ Before committing to a VPS for production use, validate that port 25 actually wo
 
    If your IP is on blocklists, you can request delisting, but a provider with many blocklisted IPs is a red flag.
 
-### Automated Validation Script
+### Automated Validation of a Running Deployment
 
-You can use the `deploy/test/vps-validate.sh` script (if available) to automate these checks:
+Once deployed, `scripts/validate-infrastructure.sh` orchestrates five checks against the live system: DNS records, TLS certificates, tunnel health, port reachability, and service stability.
 
 ```bash
-# On your VPS
-curl -sSL https://raw.githubusercontent.com/yourusername/darkpipe/main/deploy/test/vps-validate.sh | bash
+RELAY_DOMAIN=example.com HOME_DEVICE_IP=10.8.0.2 bash scripts/validate-infrastructure.sh
+
+# Machine-readable output, or mock results without contacting live infrastructure:
+bash scripts/validate-infrastructure.sh --json
+bash scripts/validate-infrastructure.sh --dry-run
 ```
 
-(Note: This script will be added in a future phase.)
+The tunnel section delegates to `deploy/test/tunnel-test.sh` (`wireguard` or `mtls` mode).
 
 ## Minimum VPS Specifications
 
@@ -192,8 +195,8 @@ After selecting a provider and provisioning a VPS:
 1. **Set hostname**: `hostnamectl set-hostname relay.yourdomain.com`
 2. **Configure reverse DNS**: Set PTR record in provider's control panel
 3. **Verify port 25**: Run validation procedure above
-4. **Install DarkPipe relay**: Follow `docs/deployment/relay-setup.md`
-5. **Configure monitoring**: See Phase 9 for health monitoring setup
+4. **Install the DarkPipe relay**: Follow [Quick Start](quickstart.md) step 1 and step 5
+5. **Configure monitoring**: See the [Configuration reference](configuration.md#monitoring) — the dashboard is served by the profile server on the home device
 
 ## Frequently Asked Questions
 
@@ -233,7 +236,7 @@ Not initially. Start with a single VPS. You can add a backup MX later:
 - Primary MX (your DarkPipe relay)
 - Secondary MX (backup relay on different VPS/provider)
 
-Phase 7 (High Availability) covers multi-relay setups.
+Multi-relay (active/backup) setups are not documented yet; if you need one, open an issue in [GitHub Issues](https://github.com/The-Artificer-of-Ciphers-LLC/darkpipe/issues) to discuss your requirements.
 
 ## Testing Status
 
@@ -242,13 +245,11 @@ All providers listed as "Tested: No" have not been validated by the DarkPipe pro
 If you successfully deploy on a listed provider, please contribute your results:
 
 ```bash
-# After successful deployment
+# After successful deployment — verify the tunnel end-to-end
 ./deploy/test/tunnel-test.sh wireguard
-./deploy/test/vps-report.sh > my-provider-report.txt
-# Submit report via GitHub issue or PR
 ```
 
-This helps future users make informed decisions.
+Then share the result in a [GitHub issue](https://github.com/The-Artificer-of-Ciphers-LLC/darkpipe/issues) or pull request so the table above can be updated to "Tested: Yes". This helps future users make informed decisions.
 
 ## Additional Resources
 
@@ -260,6 +261,6 @@ This helps future users make informed decisions.
 
 ---
 
-**Last Updated**: 2026-02-09
+**Last Updated**: 2026-11-23
 **Maintainer**: DarkPipe Project
 **License**: AGPLv3

@@ -1,421 +1,164 @@
 # DarkPipe System Architecture
 
-This document provides a detailed technical overview of DarkPipe's architecture, components, and data flows.
+This is an explanation of how DarkPipe is put together and *why*: the split between cloud relay and home device, what each component does, and how mail actually flows. For step-by-step instructions, see the [quick start](quickstart.md); for settings, see the [configuration reference](configuration.md).
 
-## Architecture Overview
+## Why a Split Architecture
 
-DarkPipe uses a split architecture that separates the internet-facing relay from persistent mail storage:
+Self-hosted email has a fundamental tension:
+
+- **Deliverability** wants your mail server on a VPS: datacenter IPs, open port 25, reputation you can manage.
+- **Sovereignty** wants your mail *stored* on hardware you physically control.
+
+Projects like Mail-in-a-Box and Mailu solve deliverability by giving you everything on a VPS — which means your mail is stored on someone else's hardware. DarkPipe resolves the tension by splitting the two roles:
+
+- The **cloud relay** (VPS) handles everything internet-facing: receiving on port 25, sending outbound, TLS, DNS authentication. It is a *pass-through* — mail is not stored there.
+- The **home device** (your hardware) stores mail and serves it: the mail server, webmail, groupware, spam filtering, onboarding, monitoring.
+
+The two are joined by an encrypted transport (WireGuard or mTLS). The security implications of this split — and its limits — are analyzed in the [security model](security.md).
+
+## Component Overview
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                              INTERNET                                    │
-└──────────────────────────┬──────────────────────────────────────────────┘
-                           │
-                           │ SMTP (port 25)
-                           │ TLS (Let's Encrypt)
-                           │
-┌──────────────────────────▼──────────────────────────────────────────────┐
-│                       CLOUD RELAY (VPS)                                  │
-│                                                                           │
-│  ┌─────────────┐    ┌──────────────┐    ┌────────────────┐             │
-│  │   Postfix   │───▶│  Go Relay    │───▶│   Certbot      │             │
-│  │     MTA     │    │   Service    │    │ (Let's Encrypt)│             │
-│  │  (port 25)  │    │ (port 10025) │    │                │             │
-│  └─────────────┘    └──────┬───────┘    └────────────────┘             │
-│                             │                                            │
-│  ┌─────────────────────────┴────────────────┐                           │
-│  │        Encrypted Transport Layer         │                           │
-│  │    WireGuard (10.8.0.0/24) OR mTLS       │                           │
-│  └─────────────────────┬────────────────────┘                           │
-└────────────────────────┼─────────────────────────────────────────────────┘
-                         │ Encrypted tunnel
-                         │ (WireGuard UDP or mTLS TCP)
-                         │
-┌────────────────────────▼─────────────────────────────────────────────────┐
-│                  HOME DEVICE (User Hardware)                              │
-│                                                                           │
-│  ┌────────────────────────────────────────────────────────┐              │
-│  │              Mail Server (user-selectable)             │              │
-│  │  Stalwart OR Maddy OR Postfix+Dovecot                 │              │
-│  │  - SMTP: port 25 (inbound), 587 (submission)          │              │
-│  │  - IMAP: port 993 (IMAPS)                             │              │
-│  │  - Management API (Stalwart: 8080, Maddy: N/A)        │              │
-│  └────────────────────────────────────────────────────────┘              │
-│                                                                           │
-│  ┌──────────────┐  ┌───────────────┐  ┌─────────────────┐               │
-│  │   Webmail    │  │ CalDAV/CardDAV│  │   Rspamd        │               │
-│  │  Roundcube/  │  │  Radicale or  │  │ Spam Filter     │               │
-│  │  SnappyMail  │  │ Stalwart built│  │ (port 11333)    │               │
-│  │ (port 8080)  │  │  (port 5232)  │  └─────────────────┘               │
-│  └──────────────┘  └───────────────┘                                     │
-│                                        ┌─────────────────┐               │
-│  ┌──────────────┐  ┌───────────────┐  │   Redis         │               │
-│  │    Caddy     │  │  Profile      │  │  (Rspamd data)  │               │
-│  │ Reverse Proxy│  │   Server      │  │                 │               │
-│  │(443/80)      │  │ (port 8090)   │  └─────────────────┘               │
-│  └──────────────┘  └───────────────┘                                     │
-│                                                                           │
-└───────────────────────────────────────────────────────────────────────────┘
+Internet
+   │  SMTP :25 (TLS)          ▲  outbound SMTP :25
+   ▼                          │
+┌──────────────────────────────────────────────────────┐
+│  CLOUD RELAY (VPS)                                   │
+│                                                      │
+│  darkpipe-relay        caddy                         │
+│  ┌───────────────┐     ┌──────────────────────────┐  │
+│  │ Postfix MTA   │────▶│ Go relay daemon          │  │  webmail, autoconfig,
+│  │ (:25, TLS)    │     │ (receives :10025)        │  │ autodiscover, dashboard
+│  └───────────────┘     │ age-encrypted offline    │  │  (TLS terminated here,
+│        ▲               │ queue + S3 overflow      │  │  proxied into tunnel)
+│        │               └────────────┬─────────────┘  │
+│  certbot sidecar (LE for relay      │                │
+│  hostname) — separate compose file   │                │
+└──────────────────────────────────────┼────────────────┘
+                                       │  WireGuard 10.8.0.0/24  (or mTLS)
+                                       ▼
+┌──────────────────────────────────────────────────────┐
+│  HOME DEVICE (your hardware)                         │
+│                                                      │
+│  Mail server (one):  stalwart :25/:587/:993/:8080   │
+│                      maddy  :25/:587/:993           │
+│                      postfix-dovecot :25/:587/:993  │
+│  Webmail (one):      snappymail :8080  / roundcube  │
+│  CalDAV/CardDAV:     radicale :5232  (or Stalwart)  │
+│  rspamd :11334  redis  profile-server :8090         │
+└──────────────────────────────────────────────────────┘
 ```
 
-## Components
+Key asymmetry: **there is no reverse proxy on the home device.** TLS for `mail.example.com` is terminated by the relay's caddy, which reverse-proxies into the tunnel to the home services. The home device itself only needs its mail and onboarding ports reachable *inside* the tunnel (and optionally on your LAN).
 
-### Cloud Relay (VPS)
+## Cloud Relay
 
-The cloud relay runs on a VPS with port 25 access and provides internet-facing SMTP services without storing mail.
+| Container | Role |
+|-----------|------|
+| `darkpipe-relay` | Postfix MTA (internet-facing :25) + the Go relay daemon. Postfix hands accepted mail to the daemon on `127.0.0.1:10025`; the daemon forwards it to the home device over the transport |
+| `caddy` | Terminates HTTPS for `mail.example.com`, `autoconfig.example.com`, `autodiscover.example.com`; proxies webmail, profile/QR downloads, and the dashboard to the home device through the tunnel |
+| `darkpipe-certbot` (sidecar, separate compose file) | Obtains and renews the Let's Encrypt certificate for the relay hostname, which Postfix uses for SMTP TLS |
 
-**Postfix MTA**
-- Receives inbound SMTP connections from the internet (port 25)
-- Sends outbound SMTP to external mail servers (port 25)
-- Configured as a relay-only server (no local delivery)
-- TLS required on all connections with optional strict mode
-- Forwards mail to internal Go relay service (port 10025)
+The relay is deliberately ephemeral:
 
-**Go Relay Service**
-- Receives mail from Postfix (port 10025)
-- Encrypts and forwards mail to home device via WireGuard or mTLS
-- Handles offline queueing when home device is unreachable
-- Manages encrypted queue with age encryption
-- S3-compatible overflow storage for large queues
-- Ephemeral storage verification (checks every 60 seconds that no mail remains on disk)
-- TLS monitoring and notifications for delivery failures
+- **Ephemeral verification** — a background check (every 60 s by default) confirms no mail persists on disk after forwarding.
+- **Offline queue** — when the home device is unreachable, the daemon encrypts the message with age and queues it in RAM (200 MiB / 10,000 message caps), spilling to S3-compatible storage when full, and purges after 7 days. See [configuration](configuration.md#s3-overflow).
+- **PII-safe logs** — addresses are redacted by default; `RELAY_DEBUG` opts into full PII.
+- **Memory budget** — 256 MB cap, sized for a $3–6/month VPS.
 
-**Certbot**
-- Automates Let's Encrypt certificate acquisition and renewal
-- Provides TLS certificates for Postfix (SMTP TLS)
-- Monitors certificate expiry and triggers alerts
+The relay's own images are built from [`cloud-relay/`](../cloud-relay/) (multi-stage: Go daemon + Postfix + WireGuard tools on Alpine) or pulled from the release images.
 
-**Monitoring Agent**
-- Health checks for all cloud relay services
-- Mail queue monitoring and alerts
-- Certificate expiry tracking
-- Reports status to home device monitoring dashboard
+## Transport Layer
 
-**Resource Limits**
-- Maximum memory: 256MB (per UX-02 requirement)
-- Designed for minimal VPS ($3-6/month)
+Two options, selected by `RELAY_TRANSPORT`:
 
-### Transport Layer
+**WireGuard (recommended)** — a full IP tunnel (`10.8.0.0/24`) between the two machines. Kernel-level, simple to operate, and it needs only one outbound rule from the home side (UDP 51820 to the VPS) — no inbound exposure on the home device. Setup scripts: [`deploy/wireguard/`](../deploy/wireguard/); config templates: [`transport/wireguard/config`](../transport/wireguard/config/templates.go).
 
-The transport layer securely connects the cloud relay to the home device using one of two mechanisms:
+**mTLS** — the relay daemon dials the home device over mutual TLS, with certificates from an internal step-ca PKI ([`deploy/pki/step-ca-setup.sh`](../deploy/pki/step-ca-setup.sh), [`transport/mtls/`](../transport/mtls/), renewal via [`transport/pki/renewal`](../transport/pki/renewal/)). Smaller footprint, no kernel module — but the checked-in home device compose files assume the WireGuard tunnel, so mTLS is the advanced/manual path.
 
-**WireGuard (Recommended for Most Users)**
-- Full tunnel VPN between cloud and home
-- Kernel-level encryption (ChaCha20-Poly1305)
-- NAT traversal built-in
-- Simple setup with wg-quick
-- Network: 10.8.0.0/24 (cloud: 10.8.0.1, home: 10.8.0.2)
-- Configuration: deploy/wireguard/cloud-setup.sh and home-setup.sh
+Both provide equivalent confidentiality for the cloud→home hop.
 
-**mTLS (Minimal Footprint Alternative)**
-- Mutual TLS authentication between cloud and home
-- Certificate-based identity verification
-- Internal PKI managed by step-ca (Smallstep)
-- Automatic certificate rotation (configurable: 30/60/90 days)
-- No kernel dependencies (userspace only)
-- Configuration: transport/mtls/ and transport/pki/
+## Home Device
 
-Both options provide equivalent security guarantees. WireGuard is simpler to set up, mTLS has a smaller footprint.
+| Container | Role | Host port |
+|-----------|------|-----------|
+| `stalwart` / `maddy` / `postfix-dovecot` | Mail server (pick one via profile) — stores mail, serves IMAP/submission; Stalwart also serves CalDAV/CardDAV and a management UI | 25, 587, 993 (+8081 Stalwart admin) |
+| `snappymail` / `roundcube` | Webmail (pick one) | 8080 |
+| `radicale` | CalDAV/CardDAV (Maddy / Postfix+Dovecot stacks only) | 5232 |
+| `rspamd` | Spam filtering: greylisting, Bayesian, RBLs — and **DKIM signing of outbound mail** | 11334 |
+| `redis` | Rspamd state (greylist, stats) | — |
+| `profile-server` | Device onboarding (mobileconfig, QR, autoconfig/autodiscover payloads, app passwords) and the monitoring dashboard/aggregator | 8090 |
 
-### Home Device
+**Where DKIM signing happens.** A common misconception: signing is done by Rspamd *on the home device*, not by the relay. Outbound mail is signed before it leaves the home network (see [`dkim_signing.conf`](../home-device/spam-filter/rspamd/local.d/dkim_signing.conf)); the relay then delivers it. The private key lives on the home device, named `<domain>.<selector>.key` under the rspamd volume; the selector must match the DNS record published by `dns-setup` (`DKIM_SELECTOR`).
 
-The home device runs all persistent mail storage and user-facing services on hardware the user controls.
-
-**Mail Server Options**
-
-*Stalwart (Default for Most Users)*
-- Modern all-in-one mail server written in Rust
-- IMAP4rev2, JMAP, SMTP submission
-- Built-in CalDAV/CardDAV (no separate groupware needed)
-- Web-based management UI (port 8080)
-- Multi-user, multi-domain support
-- Version: 0.15.4 (pre-v1.0, monitor for updates)
-- Configuration: home-device/stalwart/config.toml
-
-*Maddy (Minimal Footprint)*
-- Single Go binary, minimal dependencies
-- IMAP, SMTP submission
-- Suitable for low-resource environments (2GB RAM systems)
-- No built-in CalDAV/CardDAV (use Radicale)
-- Version: 0.8.2
-- Configuration: home-device/maddy/maddy.conf
-
-*Postfix + Dovecot (Battle-Tested Traditional)*
-- Postfix MTA + Dovecot IMAP
-- Decades of production use
-- Extensive documentation and community support
-- No built-in CalDAV/CardDAV (use Radicale)
-- Configuration: home-device/postfix-dovecot/
-
-All mail servers support multi-user, multi-domain, aliases, catch-all, and SMTP submission authentication.
-
-**Webmail Options**
-
-*Roundcube (Traditional, Feature-Rich)*
-- PHP-based webmail
-- Rich feature set, extensive plugin ecosystem
-- Mobile-responsive interface
-- SQLite backend (no database server needed)
-- Version: 1.6.13
-- Configuration: home-device/webmail/roundcube/config.inc.php
-
-*SnappyMail (Modern, Fast)*
-- Modern JavaScript webmail
-- Faster and lighter than Roundcube
-- Mobile-first design
-- Lower memory footprint (128MB limit vs 256MB)
-- Version: 2.38.2
-- Configuration: home-device/webmail/snappymail/domains/default.json
-
-**CalDAV/CardDAV Options**
-
-*Radicale (Standalone Server)*
-- Lightweight Python-based CalDAV/CardDAV server
-- Used with Maddy or Postfix+Dovecot configurations
-- Shared family calendars and contacts
-- File-based storage (no database)
-- Version: 3.6.0
-- Configuration: home-device/caldav-carddav/radicale/
-
-*Stalwart Built-in*
-- When using Stalwart mail server, CalDAV/CardDAV is built-in
-- No separate service needed
-- Unified user management
-
-**Rspamd Spam Filter**
-- Modern spam filtering engine
-- Greylisting support (temporary rejection of unknown senders)
-- Bayesian filtering with Redis backend
-- Configurable thresholds and custom rules
-- Web UI for statistics (port 11334)
-- Configuration: home-device/spam-filter/rspamd/
-
-**Redis**
-- Backend for Rspamd greylisting and statistics
-- Minimal memory footprint (64MB limit)
-- Persistent storage for greylist data
-
-**Caddy Reverse Proxy**
-- Automatic HTTPS with Let's Encrypt
-- Reverse proxy for webmail and CalDAV/CardDAV
-- HTTP/3 (QUIC) support
-- Configuration: home-device/caddy/Caddyfile
-
-**Profile Server**
-- Go service for device onboarding
-- Generates Apple .mobileconfig profiles
-- QR codes for mobile configuration
-- Thunderbird/Outlook autodiscover.xml
-- App password management
-- Port 8090
-- Built from: home-device/profiles/
-
-### DNS Management
-
-**dns-setup CLI**
-- Go command-line tool for DNS record management
-- Generates SPF, DKIM, DMARC records
-- Validates existing DNS configuration
-- API integration for Cloudflare and Route53
-- Dry-run mode by default (--apply to commit changes)
-- Built from: dns/cmd/dns-setup/
-
-**Supported DNS Providers**
-- Cloudflare (API token required)
-- AWS Route53 (AWS credentials required)
-- Manual fallback (prints records for manual entry)
-
-**DKIM Key Management**
-- Automatic DKIM key generation
-- Key rotation support
-- 2048-bit RSA keys
-
-### Monitoring
-
-**Health Checks**
-- All services include Docker healthcheck definitions
-- 30-second intervals, 3 retries, 10-second timeout
-- Specific checks: nc for SMTP/IMAP, curl/wget for HTTP services
-
-**Monitoring Dashboard**
-- Web-based dashboard showing:
-  - Mail queue status (cloud and home)
-  - Service health (all containers)
-  - Certificate expiry dates
-  - Recent delivery status
-- Configuration via profile-server environment variables
-
-**Alert Notifications**
-- Email alerts (configurable recipient)
-- Webhook notifications (for integration with monitoring platforms)
-- Healthcheck.io integration (MONITOR_HEALTHCHECK_URL)
-
-### Build System
-
-**GitHub Actions Workflows**
-
-*.github/workflows/release.yml*
-- Triggered on version tags (v*)
-- Builds multi-arch Docker images (amd64, arm64)
-- Publishes to GitHub Container Registry
-- Creates GitHub release with binaries and release notes
-
-*.github/workflows/build-prebuilt.yml*
-- Builds two pre-configured stack images:
-  - Default: Stalwart + SnappyMail
-  - Conservative: Postfix+Dovecot + Roundcube + Radicale
-- Published as ghcr.io/trek-e/darkpipe/home-stalwart:TAG-default
-- Published as ghcr.io/trek-e/darkpipe/home-postfix-dovecot:TAG-conservative
-
-*.github/workflows/build-custom.yml*
-- Manual workflow_dispatch trigger
-- Inputs for component selection (mail server, webmail, groupware)
-- Builds custom stack based on user selection
-- Published with user-selected tag
-
-**Docker Compose Profiles**
-- Single docker-compose.yml with profile-based service activation
-- Profile selection: --profile stalwart --profile roundcube
-- Allows flexible component combinations without multiple compose files
+The mail server data lives in the `mail-data` volume — this is the only state that matters to back up.
 
 ## Data Flow
 
-### Inbound Mail Flow
+### Inbound
 
-1. External mail server connects to cloud relay on port 25
-2. Postfix receives connection, negotiates TLS
-3. Postfix accepts message, passes to Go relay service (port 10025)
-4. Go relay service encrypts message and sends via WireGuard/mTLS to home device
-5. Home device mail server receives and stores message in mailbox
-6. Rspamd scans message for spam (post-delivery filtering)
-7. User retrieves message via IMAP (port 993) or webmail
+1. An external MTA connects to the relay on :25 (opportunistic TLS by default; strict mode optional).
+2. Postfix accepts the message and queues it to the relay daemon on :10025.
+3. The daemon forwards it over the transport to the home mail server's :25.
+4. The home mail server runs it through Rspamd (spam scan) and delivers to the mailbox.
+5. The user fetches via IMAP :993 or webmail.
 
-**If home device offline:**
-1. Go relay service detects unreachable home device
-2. Message encrypted with age (filippo.io/age)
-3. Encrypted message queued on local disk
-4. If queue exceeds threshold, overflow to S3-compatible storage
-5. When home device reconnects, queue drains automatically
-6. User configurable: queue (default) or bounce after timeout
+If the home device is unreachable at step 3, the message is age-encrypted and queued (RAM → S3), delivered when the device returns, then deleted from the queue.
 
-### Outbound Mail Flow
+### Outbound
 
-1. User sends mail via IMAP submission (port 587) or webmail
-2. Home device mail server authenticates user
-3. Rspamd scans outbound message
-4. Mail server relays message via WireGuard/mTLS to cloud relay
-5. Cloud relay Postfix receives message
-6. Postfix signs with DKIM
-7. Postfix delivers directly to recipient mail server (port 25)
-8. Delivery status tracked and logged
+1. The user submits via IMAP :587 (STARTTLS) or webmail.
+2. Rspamd scans and **signs** the message with the domain DKIM key.
+3. The mail server relays it over the transport to the relay's Postfix.
+4. Postfix delivers to the recipient's MTA on :25.
 
-### Offline Queue Flow
+### Webmail and onboarding
 
-**Queue Encryption (age)**
-- Each message encrypted with age recipient public key
-- Recipient private key stored securely on cloud relay
-- Encrypted messages are safe to store on disk or S3
+Browsers and mail clients talk to `mail.example.com` (and `autoconfig`/`autodiscover`), which resolve to the **relay**. Its caddy terminates TLS and proxies into the tunnel: webmail to :8080, profile/QR/autodiscover payloads to :8090, dashboard to :8090/status (Basic auth).
 
-**S3 Overflow**
-- Triggered when local queue exceeds size threshold
-- Encrypted messages uploaded to S3-compatible endpoint
-- Supports Storj, AWS S3, MinIO, or any S3-compatible service
-- When home device reconnects, S3 messages downloaded and delivered
-- Local and S3 messages deleted after successful delivery
+## Build System
 
-**Configurable Behavior**
-- RELAY_QUEUE_ENABLED: true (queue) or false (bounce immediately)
-- Queue timeout configurable (default: 7 days)
-- Overflow threshold configurable (default: 100MB local queue)
+- **Root Go module** (`go 1.26`): the relay daemon, DNS tooling, transport, and monitoring packages.
+- **`deploy/setup`** (own module): the `darkpipe-setup` wizard and migration tool (isolated UI/IMAP dependencies).
+- **`home-device/profiles`** (own module): the profile server.
+- **GitHub Actions**: `release.yml` (tag → release assets + GHCR images), `build-prebuilt.yml` (default/conservative stacks), `build-custom.yml` (workflow_dispatch stack selection). See [configuration → Releases](configuration.md#releases-and-custom-builds).
 
-## Security Model
-
-See [docs/security.md](security.md) for detailed threat model and security guarantees.
-
-**Key principles:**
-- No mail stored unencrypted on cloud relay (pass-through only)
-- All transport encrypted (WireGuard or mTLS)
-- Internal PKI with automatic rotation
-- SPF/DKIM/DMARC for email authentication
-- TLS required on all SMTP connections (TLS 1.2+ enforced on all IMAP provider clients)
-- Offline queue encrypted at rest
-- All containers hardened: no-new-privileges, cap_drop ALL, read-only root filesystem
-- Logs redact PII (email addresses, tokens) at default verbosity
-
-## Directory Structure
+## Repository Layout
 
 ```
 darkpipe/
-├── cloud-relay/              # Cloud relay Docker image and config
-│   ├── Dockerfile            # Multi-stage build (Postfix + Go relay service)
-│   ├── docker-compose.yml    # Cloud relay deployment
-│   └── caddy/                # Reverse proxy config
-├── home-device/              # Home device Docker compose and configs
-│   ├── docker-compose.yml    # Home device deployment with profiles
-│   ├── stalwart/             # Stalwart mail server config
-│   ├── maddy/                # Maddy mail server config
-│   ├── postfix-dovecot/      # Postfix+Dovecot config and Dockerfile
-│   ├── webmail/              # Roundcube and SnappyMail configs
-│   ├── caldav-carddav/       # Radicale config
-│   ├── spam-filter/          # Rspamd and Redis configs
-│   └── profiles/             # Profile server source code
-├── transport/                # Transport layer implementation
-│   ├── wireguard/            # WireGuard setup scripts
-│   ├── mtls/                 # mTLS implementation
-│   └── pki/                  # step-ca PKI setup
-├── deploy/                   # Deployment tools and guides
-│   ├── setup/                # darkpipe-setup CLI source
-│   └── platform-guides/      # Platform-specific deployment guides
-├── dns/                      # DNS management
-│   └── cmd/dns-setup/        # dns-setup CLI source
-├── monitoring/               # Monitoring and alerting
-│   └── cmd/monitor/          # Monitoring agent source
-├── migration/                # Mail migration tools
-│   └── cmd/migrate/          # Migration CLI source
-├── .github/workflows/        # GitHub Actions CI/CD
-├── .planning/                # GSD planning and execution metadata
-├── docs/                     # User-facing documentation
-├── go.mod                    # Root Go module (relay service, shared packages)
-├── LICENSE                   # AGPLv3 license text
-├── THIRD-PARTY-LICENSES.md   # Third-party dependency licenses
-└── README.md                 # Project overview
+├── cloud-relay/            # relay image, compose, Caddyfile, certbot sidecar, Postfix config
+│   └── relay/              # Go relay daemon (smtp, forward, queue, notify, tls, logutil)
+├── home-device/            # compose + profiles, per-component config
+│   ├── stalwart/ maddy/ postfix-dovecot/ webmail/ caldav-carddav/ spam-filter/
+│   └── profiles/           # profile server (own module)
+├── transport/              # wireguard (keygen, config, monitor), mtls, pki
+├── dns/                    # dns-setup: records, providers, validator, dkim
+├── monitoring/             # health, status, queue, delivery, cert (root module)
+├── deploy/
+│   ├── setup/              # darkpipe-setup wizard (own module)
+│   ├── wireguard/ pki/     # host-level setup scripts
+│   ├── platform-guides/    # Raspberry Pi, NAS, Podman, …
+│   └── test/               # tunnel/outage test scripts
+├── scripts/                # verification scripts (security, redaction, podman compat, runtime check)
+└── docs/                   # this documentation
 ```
-
-**Go Module Structure:**
-- Root module: Cloud relay service and shared packages
-- deploy/setup/go.mod: Setup wizard CLI (isolated dependencies)
-- home-device/profiles/go.mod: Profile server (isolated dependencies)
-- monitoring/go.mod: Health, status, alerts, delivery, and certificate monitoring
-
-**Security and Verification Scripts:**
-- `scripts/verify-container-security.sh` — Audits all compose files and Dockerfiles for hardening directives
-- `scripts/verify-log-redaction.sh` — Static analysis check for PII leaks in log call sites
-
-**Environment Variable Reference:**
-- `cloud-relay/.env.example` — All cloud relay environment variables with defaults
-- `home-device/.env.example` — All home device environment variables with defaults
 
 ## Technology Stack
 
-- **Go 1.25.7**: Relay service, CLIs, monitoring, migration tools
-- **Postfix**: SMTP MTA
-- **Stalwart 0.15.4**: Modern all-in-one mail server (Rust)
-- **Maddy 0.8.2**: Minimal Go mail server
-- **Dovecot**: IMAP server (with Postfix)
-- **Rspamd**: Spam filtering engine
-- **Redis**: Rspamd backend
-- **Roundcube 1.6.13**: Traditional webmail (PHP)
-- **SnappyMail 2.38.2**: Modern webmail (JavaScript)
-- **Radicale 3.6.0**: CalDAV/CardDAV server (Python)
-- **Caddy 2**: Reverse proxy with automatic HTTPS
-- **WireGuard**: VPN transport layer
-- **step-ca**: Internal PKI for mTLS
-- **age (filippo.io/age)**: Encryption for offline queue
-- **Docker**: Containerization
-- **Docker Compose**: Service orchestration
+- **Go 1.26** — relay daemon, dns-setup, darkpipe-setup, profile server, monitoring
+- **Postfix 3.9** (Alpine) — cloud relay MTA
+- **Stalwart 0.15.4** / **Maddy 0.8.2** / **Postfix+Dovecot** — mail server options
+- **SnappyMail 2.38.2** / **Roundcube 1.6.13** — webmail options
+- **Radicale 3.6.0** — CalDAV/CardDAV option
+- **Rspamd** (+ Redis) — spam filtering and DKIM signing
+- **Caddy 2** — TLS termination on the relay
+- **WireGuard** / **step-ca** — transport options
+- **age** (filippo.io/age) — offline queue encryption
+- **Let's Encrypt** via certbot — public TLS
 
 ---
 
-Last Updated: 2026-03-12
+Last Updated: 2026-11-23
 
-License: AGPLv3 - See [LICENSE](../LICENSE)
+License: AGPLv3 — see [LICENSE](../LICENSE)

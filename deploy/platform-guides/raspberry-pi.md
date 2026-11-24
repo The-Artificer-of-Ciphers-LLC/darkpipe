@@ -12,11 +12,11 @@ Deploy DarkPipe as your home mail server on Raspberry Pi 4 (arm64).
 
 **Software:**
 - Raspberry Pi OS 64-bit (Bookworm) or Ubuntu Server 24.04 LTS (arm64)
-- Docker 27+ and Docker Compose v2
+- Docker 24+ and Docker Compose v2
 - SSH access enabled
 
 **Why 4GB?**
-Full stack (Stalwart + webmail + Rspamd + Redis + Caddy) can consume 1.5-2GB RAM under load. 2GB Pi 4 is at the absolute minimum and requires memory optimization (see below). 4GB provides comfortable headroom.
+Full stack (Stalwart + webmail + Rspamd + Redis + profile server) can consume 1.5-2GB RAM under load. 2GB Pi 4 is at the absolute minimum and requires memory optimization (see below). 4GB provides comfortable headroom.
 
 **Why SSD?**
 Mail servers perform many small random I/O operations (mailbox checks, index updates, searches). SD cards degrade quickly under this workload and are 10-100x slower than SSDs. Use SD card for OS only, USB3 SSD for /var/mail.
@@ -29,7 +29,7 @@ curl -fsSL https://get.docker.com | sh
 sudo usermod -aG docker $USER
 
 # 2. Download and run setup tool
-curl -LO https://github.com/trek-e/darkpipe/releases/latest/download/darkpipe-setup-linux-arm64
+curl -LO https://github.com/The-Artificer-of-Ciphers-LLC/darkpipe/releases/latest/download/darkpipe-setup-linux-arm64
 chmod +x darkpipe-setup-linux-arm64
 ./darkpipe-setup-linux-arm64 setup
 
@@ -108,7 +108,7 @@ cd /mnt/mail-storage/darkpipe
 
 ```bash
 # Download setup tool for ARM64
-curl -LO https://github.com/trek-e/darkpipe/releases/latest/download/darkpipe-setup-linux-arm64
+curl -LO https://github.com/The-Artificer-of-Ciphers-LLC/darkpipe/releases/latest/download/darkpipe-setup-linux-arm64
 chmod +x darkpipe-setup-linux-arm64
 
 # Run setup wizard

@@ -1,269 +1,247 @@
-# DarkPipe Quick Start Guide
+# Quick Start: How to Deploy DarkPipe
 
-This guide walks you through deploying DarkPipe from zero to sending and receiving email.
+This guide takes you from zero to a working DarkPipe deployment: a cloud relay on a VPS, an encrypted tunnel, and a mail server on your home device — sending and receiving real email.
 
-**Time required:** 30-60 minutes for initial setup, plus 4-6 weeks for IP warmup (gradual sending volume increase for deliverability)
+**Time required:** 30–60 minutes of active setup, plus 4–6 weeks of gradual IP warmup before your outbound volume is treated normally by receiving providers.
+
+**What you will have at the end:**
+
+- A cloud relay that receives mail for your domain and forwards it over an encrypted tunnel
+- A mail server (Stalwart by default) on your home device, with webmail, spam filtering, and device onboarding
+- SPF, DKIM, and DMARC records published for your domain
+- Your devices configured via the profile server
+
+For a risk-free first experience, start with the [First Email tutorial](tutorials/first-email.md), which walks a single default path step by step.
 
 ## Container Runtime
 
-All examples in this guide use `docker compose` commands, which you can copy-paste directly. **Podman is fully supported** as an alternative container runtime via `podman-compose` with override files. See the [Podman platform guide](../deploy/platform-guides/podman.md) for setup instructions and key differences.
+All examples use `docker compose`. **Podman is fully supported** via `podman-compose` with override files (`-f docker-compose.podman.yml`). See the [Podman platform guide](../deploy/platform-guides/podman.md) for details, including rootful vs rootless requirements.
 
-## Prerequisites
+Validate your environment with:
 
-Before you begin, ensure you have:
+```bash
+bash scripts/check-runtime.sh
+```
 
-1. **A domain name you control**
-   - With DNS API access for automation (Cloudflare or Route53), OR
-   - Ability to manually edit DNS records
+## Before You Start
 
-2. **A VPS with port 25 access**
-   - See [docs/vps-providers.md](vps-providers.md) for compatible providers
-   - Recommended: Hetzner, Vultr, OVH, Linode
-   - Minimum specs: 1 vCPU, 1GB RAM, 20GB SSD
-   - Cost: $3-6/month
+1. **A domain name you control** — with DNS API access (Cloudflare or Route53) for automation, or the ability to add DNS records manually.
+2. **A VPS with port 25 access** — see [VPS provider selection](vps-providers.md). Recommended: Hetzner, Vultr, OVH, Linode. Minimum: 1 vCPU, 1 GB RAM, 20 GB SSD ($3–6/month).
+3. **A home device running containers** — Raspberry Pi 4+ (4 GB RAM recommended) or any x64/arm64 Linux host with Docker 24+ (or Podman 5.3+), plus the [platform guide](../deploy/platform-guides/) for your platform if you have one (NAS, Proxmox, macOS, …).
+4. **DNS names** — `dns-setup` publishes most of these in Step 4; you add the `mail` A record yourself:
+   - `relay.example.com` → your VPS IP (A record)
+   - `mail.example.com` → **your VPS IP** (A record, same IP as the relay) — webmail, autodiscovery, the dashboard, and profile downloads are all served by the relay under this name, so it must resolve to the relay.
+   - Mail *clients* (IMAP, SMTP submission, CalDAV) connect to the **home device** directly, at the address you put in `MAIL_HOSTNAME` (Step 3): its LAN address for home-only clients, or a public name (e.g., dynamic DNS) with 993/587 forwarded for remote access.
 
-3. **A home device running containers**
-   - Raspberry Pi 4+ (4GB+ RAM), OR
-   - Any x64/arm64 Linux system with Docker or Podman, OR
-   - NAS platforms: TrueNAS Scale, Unraid, Synology, Proxmox
-   - See [platform guides](../deploy/platform-guides/) for your platform
+## Step 1: Provision the Cloud Relay
 
-4. **Time**
-   - Initial setup: 30-60 minutes
-   - IP reputation warmup: 4-6 weeks (gradual sending volume increase)
+1. Provision the smallest VPS that allows port 25.
+2. Set the hostname:
 
-## Step 1: Provision Your Cloud Relay
-
-### 1.1 Choose a VPS Provider
-
-Select a provider that allows port 25 access. See [docs/vps-providers.md](vps-providers.md) for full compatibility matrix.
-
-**Recommended for beginners:**
-- **Hetzner**: No restrictions, excellent price/performance, EU-based
-- **Vultr**: Port 25 available after account verification (contact support)
-
-**VPS requirements:**
-- Operating system: Ubuntu 24.04 LTS or Debian 12
-- Ports: 25 (SMTP), 80 (HTTP), 443 (HTTPS)
-- IPv4 address (required)
-- Reverse DNS (PTR record) capability
-
-### 1.2 Set Up Your VPS
-
-1. Provision the smallest available VPS (1 vCPU, 1GB RAM, 20GB SSD)
-
-2. Set the hostname to match your relay hostname:
    ```bash
-   hostnamectl set-hostname relay.yourdomain.com
+   hostnamectl set-hostname relay.example.com
    ```
 
-3. Configure reverse DNS (PTR record):
-   - Most providers have a control panel option for setting PTR records
-   - Set PTR record for your VPS IP to: relay.yourdomain.com
-   - This is required for email deliverability
+3. Set the reverse DNS (PTR) record in your provider's control panel so the VPS IP resolves to `relay.example.com`. Many providers require this step explicitly.
+4. Update the system and install Docker:
 
-4. Update the system:
    ```bash
    apt update && apt upgrade -y
-   ```
-
-5. Install Docker and Docker Compose:
-   ```bash
    curl -fsSL https://get.docker.com | sh
    ```
 
-   > **Podman users:** Skip this step. Install Podman 5.3+ and podman-compose instead. See the [Podman platform guide](../deploy/platform-guides/podman.md) for installation and override file setup.
+   > **Podman users:** install Podman 5.3+ and podman-compose instead; the cloud relay must run rootful. See the [Podman guide](../deploy/platform-guides/podman.md).
 
-### 1.3 Verify Port 25 Access
+5. Verify port 25 is open (outbound):
 
-Test that port 25 is open and reachable:
+   ```bash
+   apt install -y telnet
+   telnet gmail-smtp-in.l.google.com 25
+   ```
+
+   You should see a `220 ... ESMTP` greeting. Type `QUIT`. If the connection times out, port 25 is blocked — contact your provider or use a different one (see [vps-providers.md](vps-providers.md)).
+
+6. Clone the repository:
+
+   ```bash
+   git clone https://github.com/The-Artificer-of-Ciphers-LLC/darkpipe.git
+   cd darkpipe
+   ```
+
+## Step 2: Set Up the Encrypted Transport
+
+WireGuard is the recommended transport: a full encrypted tunnel between cloud and home, with no firewall holes on the home device. The tunnel uses network `10.8.0.0/24` — cloud `10.8.0.1`, home `10.8.0.2`.
+
+### 2.1 Generate keys
+
+On each machine (VPS and home device):
 
 ```bash
-# Install telnet if not present
-apt install -y telnet
+# Install WireGuard tools (the setup scripts in 2.3 do this too)
+sudo apt install -y wireguard-tools
 
-# Test outbound connection to Gmail's mail server
-telnet gmail-smtp-in.l.google.com 25
+# Generate a key pair; remember the two outputs
+wg genkey            # private key
+# press Enter to derive the public key:
+wg pubkey
 ```
 
-You should see a response like:
+Write down: **cloud private key, cloud public key, home private key, home public key**.
+
+### 2.2 Write the config files
+
+**Cloud config** (`wg0.conf` on the VPS):
+
+```ini
+[Interface]
+Address = 10.8.0.1/24
+PrivateKey = <cloud-private-key>
+ListenPort = 51820
+
+[Peer]
+PublicKey = <home-public-key>
+AllowedIPs = 10.8.0.2/32
 ```
-220 mx.google.com ESMTP ...
+
+**Home config** (`wg0.conf` on the home device):
+
+```ini
+[Interface]
+Address = 10.8.0.2/24
+PrivateKey = <home-private-key>
+
+[Peer]
+PublicKey = <cloud-public-key>
+Endpoint = <VPS-public-IP>:51820
+AllowedIPs = 10.8.0.1/32
+PersistentKeepalive = 25
 ```
 
-Type `QUIT` and press Enter to exit.
+These match the templates in [`transport/wireguard/config`](../../transport/wireguard/config/templates.go). `PersistentKeepalive` matters for NAT traversal behind your home router.
 
-If the connection times out or is refused, port 25 is blocked. Contact your VPS provider.
+### 2.3 Install and start
 
-## Step 2: Set Up Transport Layer
+Both helper scripts take a path to a ready `wg0.conf`, install it, enable the systemd service with auto-restart, and (on the cloud) enable IP forwarding and open UDP 51820 in ufw.
 
-Choose one of two transport options: WireGuard (recommended) or mTLS.
+**On the VPS:**
 
-### Option A: WireGuard (Recommended)
-
-WireGuard is simpler to set up and provides a full encrypted tunnel between cloud and home.
-
-**On cloud relay VPS:**
 ```bash
-# Install WireGuard
-apt install -y wireguard
-
-# Download setup script
-curl -LO https://raw.githubusercontent.com/trek-e/darkpipe/main/deploy/wireguard/cloud-setup.sh
+curl -LO https://raw.githubusercontent.com/The-Artificer-of-Ciphers-LLC/darkpipe/main/deploy/wireguard/cloud-setup.sh
 chmod +x cloud-setup.sh
-
-# Run setup (generates keys and config)
-./cloud-setup.sh
-
-# This creates /etc/wireguard/wg0.conf
-# Note the public key displayed - you'll need it for home device setup
+sudo ./cloud-setup.sh /path/to/wg0.conf
 ```
 
-**On home device:**
-```bash
-# Install WireGuard
-# (Raspberry Pi OS / Ubuntu)
-sudo apt install -y wireguard
+**On the home device:**
 
-# Download setup script
-curl -LO https://raw.githubusercontent.com/trek-e/darkpipe/main/deploy/wireguard/home-setup.sh
+```bash
+curl -LO https://raw.githubusercontent.com/The-Artificer-of-Ciphers-LLC/darkpipe/main/deploy/wireguard/home-setup.sh
 chmod +x home-setup.sh
-
-# Run setup with cloud relay's public key and endpoint
-./home-setup.sh --cloud-endpoint YOUR_VPS_IP:51820 --cloud-pubkey CLOUD_PUBLIC_KEY
-
-# Start WireGuard
-sudo wg-quick up wg0
-sudo systemctl enable wg-quick@wg0
+sudo ./home-setup.sh /path/to/wg0.conf
 ```
 
-**Verify connectivity:**
-```bash
-# On cloud relay
-ping 10.8.0.2
+If you open a router port: forward UDP 51820 to the home device. The home side initiates the connection, so no inbound rule is strictly required if the VPS is the hub.
 
-# On home device
-ping 10.8.0.1
+### 2.4 Verify
+
+```bash
+# On the VPS
+ping -c 3 10.8.0.2
+# On the home device
+ping -c 3 10.8.0.1
 ```
 
-Both pings should succeed. If not, check firewall rules (allow UDP port 51820).
+Both directions must succeed. If not: check `sudo wg show` on both sides, confirm the public keys in each config match the *other* machine, and confirm UDP 51820 is reachable (firewall on the VPS).
 
-### Option B: mTLS (Minimal Footprint Alternative)
+### mTLS alternative
 
-mTLS uses mutual TLS authentication without requiring a VPN. Suitable for minimal systems or when WireGuard is not available.
+mTLS is a minimal-footprint alternative that needs no tunnel: the relay dials the home device over mutual TLS using certificates from an internal step-ca PKI. The relay side is ready (`RELAY_TRANSPORT=mtls` plus `RELAY_CA_CERT`/`RELAY_CLIENT_CERT`/`RELAY_CLIENT_KEY` — see [configuration](configuration.md#mtls-transport)), and `deploy/pki/step-ca-setup.sh` provisions the internal CA on the home device. The checked-in home device compose files assume the WireGuard tunnel, so **WireGuard is the supported path for the standard deployment**; treat mTLS as an advanced, manual integration (see [`transport/mtls`](../../transport/mtls/)).
 
-**Set up internal PKI with step-ca:**
+## Step 3: Configure the Deployment
+
+There are two ways to produce deployment configuration. Pick one:
+
+### Option A (recommended): the `.env` files
+
+Both deploy targets ship `.env.example` files documenting every variable with defaults:
+
 ```bash
-# On home device (acts as CA)
-curl -LO https://github.com/trek-e/darkpipe/raw/main/deploy/pki/step-ca-setup.sh
-chmod +x step-ca-setup.sh
-./step-ca-setup.sh
+# On the VPS
+cd darkpipe/cloud-relay
+cp .env.example .env
 
-# Generate certificates for cloud relay
-step ca certificate relay.internal relay-cert.pem relay-key.pem
-
-# Copy relay-cert.pem, relay-key.pem, and ca.crt to cloud relay VPS
+# On the home device
+cd darkpipe/home-device
+cp .env.example .env
 ```
 
-**Configure mTLS in docker-compose.yml:**
-- Uncomment mTLS environment variables
-- Mount certificate files into containers
-- See [docs/configuration.md](configuration.md) for full mTLS setup
+Edit each `.env` with your real values. The variables that must change:
 
-## Step 3: Run the Setup Wizard
-
-The darkpipe-setup wizard generates configuration files for both cloud relay and home device.
-
-### 3.1 Download Setup Tool
-
-Download the appropriate binary for your platform:
-
-**Linux (amd64):**
-```bash
-curl -LO https://github.com/trek-e/darkpipe/releases/latest/download/darkpipe-setup-linux-amd64
-chmod +x darkpipe-setup-linux-amd64
-```
-
-**Linux (arm64, Raspberry Pi):**
-```bash
-curl -LO https://github.com/trek-e/darkpipe/releases/latest/download/darkpipe-setup-linux-arm64
-chmod +x darkpipe-setup-linux-arm64
-```
-
-**macOS (Intel):**
-```bash
-curl -LO https://github.com/trek-e/darkpipe/releases/latest/download/darkpipe-setup-darwin-amd64
-chmod +x darkpipe-setup-darwin-amd64
-```
-
-**macOS (Apple Silicon):**
-```bash
-curl -LO https://github.com/trek-e/darkpipe/releases/latest/download/darkpipe-setup-darwin-arm64
-chmod +x darkpipe-setup-darwin-arm64
-```
-
-### 3.2 Run the Wizard
+**cloud-relay/.env**
 
 ```bash
-./darkpipe-setup-linux-amd64
-```
-
-The wizard will ask:
-
-1. **Domain name**: Your primary mail domain (e.g., example.com)
-2. **Relay hostname**: FQDN for your cloud relay (e.g., relay.example.com)
-3. **Mail server**: Stalwart (default), Maddy, or Postfix+Dovecot
-4. **Webmail**: Roundcube or SnappyMail
-5. **CalDAV/CardDAV**: Radicale (if not using Stalwart) or Stalwart built-in
-6. **Transport type**: WireGuard or mTLS
-7. **Admin email**: Your admin email address
-8. **Admin password**: Password for admin account
-
-The wizard generates:
-- `cloud-relay/.env` and `cloud-relay/docker-compose.yml`
-- `home-device/.env` and `home-device/docker-compose.yml`
-- Configuration files for selected components
-
-### 3.3 Review Generated Configuration
-
-Check the generated .env files and adjust if needed. Reference `.env.example` files for all available variables with descriptions and defaults:
-
-```bash
-# See all available variables and their defaults
-cat cloud-relay/.env.example
-cat home-device/.env.example
-```
-
-**cloud-relay/.env:**
-```bash
-RELAY_HOSTNAME=relay.example.com
+RELAY_HOSTNAME=relay.example.com     # must match your PTR record
 RELAY_DOMAIN=example.com
-RELAY_TRANSPORT=wireguard
-RELAY_HOME_ADDR=10.8.0.2:25
+RELAY_HOME_ADDR=10.8.0.2:25          # home device on the tunnel
+HOME_DEVICE_IP=10.8.0.2
 ```
 
-**home-device/.env:**
+**home-device/.env**
+
 ```bash
 MAIL_DOMAIN=example.com
-MAIL_HOSTNAME=mail.example.com
+MAIL_HOSTNAME=mail.example.com      # set to the address your clients reach — see note below
 ADMIN_EMAIL=admin@example.com
-ADMIN_PASSWORD=changeme  # Change this!
+ADMIN_PASSWORD=change-me             # CHANGE THIS
+DKIM_SELECTOR=darkpipe-2026q4        # the selector dns-setup publishes (Step 4)
 ```
+
+> **Note on `MAIL_HOSTNAME`.** The onboarding profiles and the autoconfig/autodiscover payloads use this name, and mail *clients* connect to it directly — the relay never proxies mail ports (993/587/5232) into the tunnel. Set it to the address your clients actually reach: the home device's LAN name or IP for home-only clients, or a public name (e.g., a dynamic-DNS hostname) with 993/587 port-forwarded for remote clients. The relay-side webmail/dashboard/autodiscovery services are addressed separately by `WEBMAIL_DOMAINS` in `cloud-relay/.env` (default `mail.${RELAY_DOMAIN}`) — that name must resolve to the relay.
+
+Full variable reference: [configuration.md](configuration.md).
+
+### Option B: the setup wizard
+
+Download the `darkpipe-setup` release asset for your platform and run the `setup` subcommand:
+
+```bash
+curl -LO https://github.com/The-Artificer-of-Ciphers-LLC/darkpipe/releases/latest/download/darkpipe-setup-linux-amd64
+chmod +x darkpipe-setup-linux-amd64
+./darkpipe-setup-linux-amd64 setup
+```
+
+The wizard asks (with live validation where possible):
+
+1. Setup mode — Quick (recommended defaults) or Advanced
+2. Primary mail domain
+3. Cloud relay hostname (tests port 25)
+4. Admin email
+5. Mail server — `stalwart` (default), `maddy`, or `postfix-dovecot`
+6. Webmail — `snappymail` (default), `roundcube`, or none
+7. Calendar/Contacts — Stalwart built-in, Radicale, or none
+8. Transport — `wireguard` (default) or `mtls`
+
+It then generates in the current directory:
+
+- `docker-compose.yml` — a single combined compose file with your selected services
+- `.darkpipe.yml` — the saved configuration
+- `secrets/admin_password.txt` — a **generated** 24-character admin password (note it; the wizard does not take a password as input)
+- `secrets/dkim_private_key.pem` — a placeholder to replace with the key from Step 4
+- `.darkpipe-configured` — completion marker
+
+Re-running `setup` in the same directory offers to upgrade the existing configuration.
 
 ## Step 4: Configure DNS
 
-DarkPipe requires several DNS records for email authentication and deliverability.
+The `dns-setup` tool generates and validates all required records: MX, A, SPF, DKIM, DMARC, mail SRV records, and autoconfig/autodiscover CNAMEs.
 
-### 4.1 Download DNS Setup Tool
+Download the release asset:
 
 ```bash
-curl -LO https://github.com/trek-e/darkpipe/releases/latest/download/dns-setup-linux-amd64
+curl -LO https://github.com/The-Artificer-of-Ciphers-LLC/darkpipe/releases/latest/download/dns-setup-linux-amd64
 chmod +x dns-setup-linux-amd64
 ```
 
-### 4.2 Run DNS Setup (Dry-Run)
-
-First, run in dry-run mode to preview changes:
+### 4.1 Preview (dry-run — the default)
 
 ```bash
 ./dns-setup-linux-amd64 \
@@ -272,351 +250,213 @@ First, run in dry-run mode to preview changes:
   --relay-ip YOUR_VPS_IP
 ```
 
-This will display:
-- MX record (points to relay.example.com)
-- A record for relay.example.com (your VPS IP)
-- SPF record (authorized senders)
-- DKIM record (public key for signature verification)
-- DMARC record (policy enforcement)
+The run prints every record, writes a `DNS-RECORDS.md` guide for manual entry, and generates the DKIM key pair in `/etc/darkpipe/dkim/` (selector format: `darkpipe-<year>q<quarter>`, e.g. `darkpipe-2026q4`).
 
-### 4.3 Apply DNS Changes
+### 4.2 Apply
 
-**Option A: Automatic (Cloudflare or Route53)**
+The tool auto-detects your DNS provider from the domain's NS records. If it detects **Cloudflare**, export the token first; for **Route53**, provide standard AWS credentials. There is no `--provider` flag:
 
-Set up API credentials:
-
-*Cloudflare:*
 ```bash
-export CLOUDFLARE_API_TOKEN=your_token_here
+export CLOUDFLARE_API_TOKEN=your_token   # Cloudflare hosts
+# or: export AWS_ACCESS_KEY_ID=... AWS_SECRET_ACCESS_KEY=...   # Route53 hosts
+
+./dns-setup-linux-amd64 \
+  --domain example.com \
+  --relay-hostname relay.example.com \
+  --relay-ip YOUR_VPS_IP \
+  --apply
 ```
 
-*Route53:*
+For any other provider, add the records from the printed list (or `DNS-RECORDS.md`) in your DNS control panel.
+
+### 4.3 Install the DKIM key on the home device
+
+Outbound mail is DKIM-signed by **Rspamd on the home device** (not on the relay). After generating the key:
+
 ```bash
-export AWS_ACCESS_KEY_ID=your_key_here
-export AWS_SECRET_ACCESS_KEY=your_secret_here
+# On the machine where dns-setup ran — note the selector it printed, e.g. darkpipe-2026q4
+scp /etc/darkpipe/dkim/darkpipe-2026q4.private.pem user@home-device:~/
+
+# On the home device, from the repo clone's root directory — the key must be
+# named <domain>.<selector>.key:
+cd ~/darkpipe   # wherever you cloned the repository
+mkdir -p home-device/spam-filter/rspamd/dkim-keys
+mv ~/darkpipe-2026q4.private.pem home-device/spam-filter/rspamd/dkim-keys/example.com.darkpipe-2026q4.key
 ```
 
-Apply changes:
+And set the same selector in `home-device/.env` (`DKIM_SELECTOR=darkpipe-2026q4`) so Rspamd signs with the selector published in DNS.
+
+### 4.4 Validate
+
+After propagation (5–60 minutes):
+
 ```bash
 ./dns-setup-linux-amd64 \
   --domain example.com \
   --relay-hostname relay.example.com \
   --relay-ip YOUR_VPS_IP \
-  --provider cloudflare \
-  --apply
-```
-
-**Option B: Manual**
-
-Copy the displayed records and add them manually via your DNS provider's control panel.
-
-### 4.4 Validate DNS
-
-After DNS propagation (5-60 minutes), validate:
-
-```bash
-./dns-setup-linux-amd64 \
-  --domain example.com \
   --validate-only
 ```
 
-This checks that all required records are present and correct.
+All checks (SPF, DKIM, DMARC, MX, SRV, autoconfig/autodiscover CNAMEs, PTR) should pass.
 
-## Step 5: Deploy Services
-
-### 5.1 Deploy Cloud Relay
-
-On your VPS:
+You can also have the tool send a DKIM-signed test message:
 
 ```bash
-cd cloud-relay
+./dns-setup-linux-amd64 --domain example.com --relay-hostname relay.example.com --relay-ip YOUR_VPS_IP --send-test you@external-mail.com
+```
+
+## Step 5: Deploy the Services
+
+### 5.1 Cloud relay (on the VPS)
+
+```bash
+cd darkpipe/cloud-relay
 docker compose up -d
-```
-
-> **Podman users:** Use `podman-compose` with the override file: `podman-compose -f docker-compose.yml -f docker-compose.podman.yml up -d`. The cloud relay requires rootful Podman for port 25 binding. See the [Podman platform guide](../deploy/platform-guides/podman.md).
-
-Verify services are running:
-```bash
 docker compose ps
-docker compose logs -f
 ```
 
-Expected containers:
-- darkpipe-relay (Postfix + Go relay service)
-- caddy (reverse proxy)
+Expected containers: `darkpipe-relay` (Postfix + Go relay daemon) and `caddy` (reverse proxy for webmail and autodiscovery).
 
-### 5.2 Deploy Home Device
-
-On your home device:
+**Let's Encrypt for the relay hostname.** Postfix obtains its TLS certificate from the certbot sidecar, which is a *separate* compose file (it also needs port 80, which caddy holds). Use this sequence:
 
 ```bash
-cd home-device
+# 1. Start the relay first (it runs without TLS until a certificate appears)
+docker compose up -d relay
 
-# Start with your selected profiles
-# Example for Stalwart + SnappyMail:
+# 2. Run the certbot sidecar (set CERTBOT_EMAIL in .env first)
+docker compose -f docker-compose.yml -f certbot/docker-compose.certbot.yml up -d certbot
+docker compose logs certbot | tail   # expect "Certificate obtained successfully"
+
+# 3. Then bring up caddy
+docker compose up -d caddy
+```
+
+> **Port 80 note:** caddy and the certbot sidecar both want port 80 for HTTP-01 challenges. If the sidecar logs a bind failure, `docker compose stop caddy` while the initial certificate is obtained, then restart caddy. For unattended renewal alongside caddy, switch the sidecar to a DNS-01 challenge (`--dns-cloudflare` with `CLOUDFLARE_API_TOKEN`).
+
+The relay entrypoint watches the certificate directory and reloads Postfix automatically when the certificate appears.
+
+### 5.2 Home device
+
+```bash
+cd darkpipe/home-device
 docker compose --profile stalwart --profile snappymail up -d
-
-# Example for Postfix+Dovecot + Roundcube + Radicale:
-docker compose --profile postfix-dovecot --profile roundcube --profile radicale up -d
-```
-
-> **Podman users:** Add `-f docker-compose.podman.yml` after the base compose file. The home device can run rootless. See the [Podman platform guide](../deploy/platform-guides/podman.md).
-
-Verify services are running:
-```bash
 docker compose ps
-docker compose logs -f
 ```
 
-Expected containers (for Stalwart + SnappyMail):
-- stalwart (mail server)
-- snappymail (webmail)
-- rspamd (spam filter)
-- redis (Rspamd backend)
-- profile-server (device onboarding)
-- caddy (reverse proxy)
+Other common combinations:
+
+```bash
+# Conservative stack
+docker compose --profile postfix-dovecot --profile roundcube --profile radicale up -d
+
+# Minimal stack (low RAM)
+docker compose --profile maddy --profile snappymail --profile radicale up -d
+```
+
+> **Podman users:** add `-f docker-compose.podman.yml` (and `-f docker-compose.podman-selinux.yml` on SELinux systems) after the base compose file. The home device can run rootless if you set `net.ipv4.ip_unprivileged_port_start=0`. See the [Podman guide](../deploy/platform-guides/podman.md).
+
+Expected containers for the default stack: `stalwart`, `snappymail`, `rspamd`, `redis`, `profile-server`. There is **no caddy on the home device** — TLS for `mail.example.com` is terminated by the cloud relay's caddy, which proxies into the tunnel.
+
+Host ports on the home device: 25/587/993 (mail), 8080 (webmail), 8081 (Stalwart admin UI), 8090 (profile server), 5232 (Radicale, if used), 11334 (Rspamd admin UI).
 
 ## Step 6: Test Email Delivery
 
-### 6.1 Send Test Email to Your Domain
+1. **Inbound:** from an external account (Gmail, …), send a message to `admin@example.com`.
+2. **Check it:** open webmail at `https://mail.example.com` (served by the relay's caddy through the tunnel) or `http://<HOME_DEVICE_IP>:8080` directly. Log in with `admin@example.com` and the `ADMIN_PASSWORD` from `home-device/.env` (or the password the wizard generated).
+3. **Outbound:** from webmail, send a message to your personal inbox. Check the spam folder first — a new IP has no reputation yet.
+4. **Authentication:** forward the outbound message to `check-auth@verifier.port25.com`. Expect SPF pass, DKIM pass, DMARC pass. Any failure: re-run `dns-setup --validate-only` and check `DKIM_SELECTOR` matches the published record.
+5. **Score:** send a test to [mail-tester.com](https://www.mail-tester.com/) and aim for 9/10 or better.
 
-Use the dns-setup tool's test feature:
+## Step 7: Onboard Your Devices
 
-```bash
-./dns-setup-linux-amd64 \
-  --domain example.com \
-  --send-test \
-  --from external@gmail.com \
-  --to admin@example.com
-```
+The profile server (host port **8090**) configures mail clients. Its web UI is at:
 
-Or send manually from an external email account (Gmail, Outlook, etc.) to admin@example.com.
+- `http://<HOME_DEVICE_IP>:8090/devices` on the LAN, or
+- `https://mail.example.com/profile/` … `https://mail.example.com/qr/` via the relay (Basic auth with your admin credentials)
 
-### 6.2 Check Webmail for Received Mail
+1. **iOS/macOS:** use the Add Device flow, download the generated `.mobileconfig` — one tap installs IMAP (993), SMTP (587), and CalDAV/CardDAV where applicable.
+2. **Android:** generate a QR code from the web UI and scan it with K-9 Mail, FairEmail, or the Gmail app.
+3. **Thunderbird / Outlook:** point them at `autoconfig.example.com` / `autodiscover.example.com`; the relay's caddy proxies the generated payloads. Manual settings: incoming = the `MAIL_HOSTNAME` address from Step 3, port 993 (SSL/TLS); outgoing = same address, port 587 (STARTTLS); password = the app password from step 1.
+4. **App passwords:** issue per-device app passwords from the web UI (`/devices`) instead of sharing your main password.
 
-1. Access webmail at https://mail.example.com (or http://HOME_DEVICE_IP:8080 if DNS not configured)
-
-2. Log in with admin credentials:
-   - Email: admin@example.com
-   - Password: (from home-device/.env ADMIN_PASSWORD)
-
-3. Check inbox for test message
-
-### 6.3 Send Outbound Test Email
-
-From webmail:
-
-1. Compose a new email to an external address (your personal Gmail, etc.)
-2. Send the message
-3. Check the external account for delivery
-
-**Check spam folder** if not in inbox (new IP reputation takes time).
-
-### 6.4 Verify Email Authentication
-
-Forward the received test email (sent from your DarkPipe) to check-auth@verifier.port25.com.
-
-You'll receive an automated reply showing:
-- SPF: PASS
-- DKIM: PASS
-- DMARC: PASS
-
-If any fail, review DNS configuration with `dns-setup --validate-only`.
-
-## Step 7: Onboard Devices
-
-### 7.1 Access Profile Server
-
-Navigate to http://HOME_DEVICE_IP:8090 in your browser.
-
-### 7.2 iOS/macOS Configuration
-
-1. Click "iOS/macOS Profile"
-2. Download the .mobileconfig file
-3. On iOS: Open the file, follow prompts to install profile
-4. On macOS: Open the file, System Preferences > Profiles > Install
-
-This configures:
-- IMAP (mail.example.com:993)
-- SMTP (mail.example.com:587)
-- CalDAV (if enabled)
-- CardDAV (if enabled)
-
-### 7.3 Android Configuration
-
-1. Click "QR Code"
-2. Scan with Android mail app (Gmail app, K-9 Mail, FairEmail)
-3. Follow prompts to add account
-
-### 7.4 Desktop Mail Clients (Thunderbird, Outlook)
-
-Thunderbird and Outlook support autodiscover.
-
-**Manual configuration if autodiscover fails:**
-
-*IMAP Settings:*
-- Server: mail.example.com
-- Port: 993
-- Security: SSL/TLS
-- Authentication: Normal password
-- Username: your-email@example.com
-
-*SMTP Settings:*
-- Server: mail.example.com
-- Port: 587
-- Security: STARTTLS
-- Authentication: Normal password
-- Username: your-email@example.com
-
-### 7.5 Generate App Passwords (Optional)
-
-For mail clients that don't support regular passwords or for enhanced security:
-
-1. Access profile server: http://HOME_DEVICE_IP:8090
-2. Click "App Passwords"
-3. Generate a new password for specific device/app
-4. Use this password instead of your main password when configuring mail client
+> **Client TLS note:** the home mail server ships a self-signed TLS certificate, so a client connecting to it directly will ask you to trust it once. For remote clients, you can instead mount a Let's Encrypt (DNS-01) certificate for `MAIL_HOSTNAME` in the mail server config.
 
 ## Step 8: Monitor and Maintain
 
-### 8.1 Access Monitoring Dashboard
+**Dashboard.** The monitoring dashboard is served by the profile server at:
 
-Navigate to http://HOME_DEVICE_IP:8090/monitoring
+- `http://<HOME_DEVICE_IP>:8090/status` on the LAN
+- `https://mail.example.com/status` via the relay (Basic auth)
 
-Dashboard shows:
-- Mail queue status (cloud and home)
-- Service health (all containers)
-- Certificate expiry dates
-- Recent delivery logs
+It shows queue status, service health, certificate expiry, and recent delivery results. Liveness/readiness endpoints: `/health/live`, `/health/ready`.
 
-### 8.2 Configure Alerts
-
-Edit home-device/.env:
+**Alerts** (`home-device/.env`, then `docker compose up -d`):
 
 ```bash
-# Email alerts
-MONITOR_ALERT_EMAIL=your-personal-email@gmail.com
-
-# Webhook alerts (Slack, Discord, etc.)
-MONITOR_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
-
-# Healthcheck.io integration
-MONITOR_HEALTHCHECK_URL=https://hc-ping.com/your-uuid-here
+MONITOR_ALERT_EMAIL=you@personal-mail.com
+MONITOR_WEBHOOK_URL=https://hooks.slack.com/services/...
+MONITOR_HEALTHCHECK_URL=https://hc-ping.com/your-uuid
 ```
 
-Restart profile-server to apply:
-```bash
-docker compose restart profile-server
-```
-
-### 8.3 Check Logs
-
-By default, logs redact email addresses for privacy (e.g., `s***r@example.com`). To see full email addresses for troubleshooting, enable debug mode:
+**Logs.** Email addresses are redacted in logs by default (`s***r@example.com`). For active troubleshooting only:
 
 ```bash
-# Cloud relay — add to cloud-relay/.env
+# cloud-relay/.env
 RELAY_DEBUG=true
-
-# Profile server — add to home-device/.env
-PROFILE_DEBUG=true
+# home-device: add PROFILE_DEBUG=true to the profile-server service in docker-compose.yml
 ```
 
-Restart services after changing debug settings. **Disable debug mode after troubleshooting** — it logs full PII.
+**Restart** the affected containers after changing debug settings, and **turn debug off again** afterwards — it logs full PII.
 
-**Cloud relay logs:**
-```bash
-cd cloud-relay
-docker compose logs -f relay
-```
-
-**Home device logs:**
-```bash
-cd home-device
-docker compose logs -f stalwart  # or maddy, postfix-dovecot
-docker compose logs -f rspamd
-```
-
-### 8.4 IP Warmup
-
-New IP addresses have no sending reputation. Warm up gradually over 4-6 weeks:
-
-**Week 1:** Send 10-20 emails/day to engaged recipients
-**Week 2:** 50-100 emails/day
-**Week 3:** 200-500 emails/day
-**Week 4-6:** Gradually increase to your normal sending volume
-
-**Tips:**
-- Start with emails to people you know who will open and respond
-- Avoid sending to large lists immediately
-- Monitor spam folder placement
-- Use [mail-tester.com](https://www.mail-tester.com/) to check deliverability score
+**IP warmup.** For the first 4–6 weeks, ramp outbound volume gradually: week 1: 10–20 mail/day; week 2: 50–100; week 3: 200–500; weeks 4–6: your normal volume. Send to engaged recipients first, and monitor spam-folder placement and [MXToolbox](https://mxtoolbox.com/blacklists.aspx) blocklist status.
 
 ## What's Next
 
-**Add Users and Domains:**
-- Stalwart: Access web UI at http://HOME_DEVICE_IP:8080
-- Maddy: Edit home-device/maddy/setup-users.sh and restart container
-- Postfix+Dovecot: Edit vmailbox and virtual files, restart container
-
-**Migrate Existing Email:**
-- See [docs/migration.md](migration.md) for detailed migration guide
-- Supports Gmail, Outlook, iCloud, MailCow, Mailu, docker-mailserver, generic IMAP
-
-**Configure Spam Filtering:**
-- Access Rspamd web UI: http://HOME_DEVICE_IP:11334
-- Train Bayesian filter with spam/ham samples
-- Adjust greylisting and threshold settings
-
-**Set Up Backups:**
-- Back up home device mail data: docker volumes or mail-data directory
-- Cloud relay has no mail to back up (by design)
-- Recommended: Daily automated backups with retention
-
-**Customize Configuration:**
-- See [docs/configuration.md](configuration.md) for all environment variables
-- Adjust memory limits, ports, queue behavior, etc.
-
-**Improve Security:**
-- Enable firewall on both cloud and home (allow only required ports)
-- Set up fail2ban on cloud relay to prevent brute-force attacks
-- Use strong passwords for all accounts
-- Enable full-disk encryption on home device
+- **Add users and domains** — Stalwart: admin UI at `http://<HOME_DEVICE_IP>:8081` (or via `https://mail.example.com` if you add it to the relay Caddyfile). Maddy: edit `home-device/maddy/setup-users.sh` and `docker compose restart maddy`. Postfix+Dovecot: edit the `vmailbox`/`virtual`/`users` files and `docker compose restart postfix-dovecot`.
+- **Migrate existing mail** — see the [migration guide](migration.md) (`darkpipe-setup migrate`).
+- **Tune spam filtering** — Rspamd admin UI at `http://<HOME_DEVICE_IP>:11334`; train the Bayesian filter with spam/ham samples.
+- **Back up** — the `mail-data` volume on the home device is everything; the cloud relay has nothing worth backing up. Snapshot it daily.
+- **Customize** — every variable is documented in [configuration.md](configuration.md); the CLI tools in [reference/cli.md](reference/cli.md).
 
 ## Troubleshooting
 
-**Mail not being received:**
-1. Check DNS records: `dns-setup --validate-only`
-2. Verify port 25 is open on cloud relay VPS
-3. Check cloud relay logs: `docker compose logs relay`
-4. Verify WireGuard/mTLS tunnel is up: `ping 10.8.0.2` from cloud
+**Mail not being received**
 
-**Mail not being sent:**
-1. Check SMTP submission port 587 is accessible
-2. Review home device mail server logs
-3. Verify DKIM signing is working (check-auth@verifier.port25.com)
-4. Check if IP is on blocklists: [MXToolbox](https://mxtoolbox.com/blacklists.aspx)
+1. `dns-setup ... --validate-only` — all records pass? (MX, A, PTR especially)
+2. Is port 25 reachable on the VPS? `telnet relay.example.com 25` from outside.
+3. Cloud relay logs: `docker compose logs relay` — look for delivery to `10.8.0.2`.
+4. Is the tunnel up? `ping 10.8.0.2` from the VPS, `sudo wg show` on both sides.
 
-**Webmail not loading:**
-1. Verify Caddy is running: `docker compose ps caddy`
-2. Check Caddy logs: `docker compose logs caddy`
-3. Ensure webmail container is healthy: `docker compose ps`
+**Mail not being sent**
 
-**Transport tunnel down:**
-1. Check WireGuard status: `sudo wg show`
-2. Verify firewall allows UDP 51820 (WireGuard) or TCP 443 (mTLS)
-3. Check monitoring dashboard for connectivity alerts
+1. Does `https://mail.example.com` load? (caddy on the relay)
+2. Home device mail server logs: `docker compose logs stalwart` (or `maddy` / `postfix-dovecot`).
+3. DKIM: forward a sample to `check-auth@verifier.port25.com`; check `DKIM_SELECTOR` and the key file name.
+4. Blocklists: check the relay IP on [MXToolbox](https://mxtoolbox.com/blacklists.aspx).
 
-**Services using too much memory:**
-1. Review resource limits in docker-compose.yml
-2. Consider switching to lighter components (Maddy instead of Stalwart, SnappyMail instead of Roundcube)
-3. See platform guides for memory optimization tips
+**Webmail not loading**
 
-**Need help?**
-- GitHub Discussions: https://github.com/trek-e/darkpipe/discussions
-- GitHub Issues: https://github.com/trek-e/darkpipe/issues (for bugs)
+1. On the **VPS**: `docker compose ps caddy` and `docker compose logs caddy` — TLS errors? ACME failures?
+2. From the VPS: `wget -qO- http://10.8.0.2:8080/` — reachable through the tunnel?
+3. On the home device: `docker compose ps` — is the webmail container healthy?
+
+**Transport tunnel down**
+
+```bash
+sudo wg show                    # both sides
+sudo wg-quick down wg0 && sudo wg-quick up wg0
+sudo iptables -L | grep 51820   # UDP 51820 must be allowed on the VPS
+```
+
+**Services using too much memory**
+
+`docker stats` on the home device. For 2 GB systems: switch Stalwart → Maddy and Roundcube → SnappyMail, and review the per-service limits in `home-device/docker-compose.yml`.
+
+**Need help?** [GitHub Discussions](https://github.com/The-Artificer-of-Ciphers-LLC/darkpipe/discussions) for questions, [GitHub Issues](https://github.com/The-Artificer-of-Ciphers-LLC/darkpipe/issues) for bugs.
 
 ---
 
-Last Updated: 2026-03-12
+Last Updated: 2026-11-23
 
-License: AGPLv3 - See [LICENSE](../LICENSE)
+License: AGPLv3 — see [LICENSE](../LICENSE)

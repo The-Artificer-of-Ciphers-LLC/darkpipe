@@ -306,7 +306,7 @@ Mail server formats are not identical. Switching requires:
 Depends on your mail server:
 
 **Stalwart:**
-- Access web UI: http://HOME_DEVICE_IP:8080
+- Access web UI: http://HOME_DEVICE_IP:8081
 - Log in with admin credentials
 - Go to "Users" or "Domains" section
 - Add via web interface
@@ -362,8 +362,8 @@ Depends on your mail server:
 **Process:**
 1. Pull new images:
    ```bash
-   docker pull ghcr.io/trek-e/darkpipe/cloud-relay:vX.Y.Z
-   docker pull ghcr.io/trek-e/darkpipe/home-stalwart:vX.Y.Z-default
+   docker pull ghcr.io/The-Artificer-of-Ciphers-LLC/darkpipe/cloud-relay:vX.Y.Z
+   docker pull ghcr.io/The-Artificer-of-Ciphers-LLC/darkpipe/home-stalwart:vX.Y.Z-default
    ```
 
 2. Update docker-compose.yml to reference new version tags
@@ -441,8 +441,9 @@ If ping/nc fails, transport tunnel is down.
 
 ### Webmail isn't loading
 
-**Check Caddy reverse proxy:**
+**Check Caddy reverse proxy** (Caddy runs on the **cloud relay**, not the home device):
 ```bash
+cd darkpipe/cloud-relay
 docker compose logs -f caddy
 ```
 
@@ -491,7 +492,7 @@ openssl s_client -connect HOME_DEVICE_IP:25 -cert /certs/relay.crt -key /certs/r
 ```
 
 **Check monitoring dashboard:**
-- Navigate to http://HOME_DEVICE_IP:8090/monitoring
+- Navigate to http://HOME_DEVICE_IP:8090/status
 - Check "Transport Status" section for connectivity alerts
 
 ### Services using too much memory
@@ -515,8 +516,8 @@ docker stats
 ### Need help?
 
 **Community support:**
-- [GitHub Discussions](https://github.com/trek-e/darkpipe/discussions) - Ask questions, share experiences
-- [GitHub Issues](https://github.com/trek-e/darkpipe/issues) - Report bugs
+- [GitHub Discussions](https://github.com/The-Artificer-of-Ciphers-LLC/darkpipe/discussions) - Ask questions, share experiences
+- [GitHub Issues](https://github.com/The-Artificer-of-Ciphers-LLC/darkpipe/issues) - Report bugs
 
 **Documentation:**
 - [Quick Start Guide](quickstart.md)
@@ -531,6 +532,6 @@ docker stats
 
 ---
 
-Last Updated: 2026-03-12
+Last Updated: 2026-11-23
 
 License: AGPLv3 - See [LICENSE](../LICENSE)
